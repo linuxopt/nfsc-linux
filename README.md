@@ -36,13 +36,14 @@ that stands in for the console. This fork keeps all of that and adds:
 | **A graphical launcher** | Play, graphics, AI textures, controls, saves (with a value editor), mods, DLC and system pages. |
 | **Mods** | Texture mods and file-replacement mods, enabled and ordered in the launcher. |
 | **DLC** | Your own Xbox 360 Marketplace packages (CON/LIVE) unpacked and offered to the game. |
+| **Its own versions and updates** | nfsc-linux is versioned on its own (from 1.0.0). The launcher checks this repository's newest release every time it starts and updates the AppImage in place; the game's *Check for Updates* asks this repository too. |
 | **Unlock all** (opt-in) | The game's own debug "unlock all things" flag, plus the DLC check, for every car, part and race. Off by default; saves never record it. |
 
 ## Download and play
 
-1. Download `SpeedBreaker-Carbon-<version>-x86_64.AppImage` from the
-   [Releases](https://github.com/linuxopt/nfsc-linux/releases) page (check it against its `.sha256`).
-2. `chmod +x SpeedBreaker-Carbon-*.AppImage` and run it.
+1. Download `NFSC-Linux-x86_64.AppImage` from the
+   [latest release](https://github.com/linuxopt/nfsc-linux/releases/latest) (check it against its `.sha256`).
+2. `chmod +x NFSC-Linux-x86_64.AppImage` and run it.
 3. **Play → Choose your disc image (ISO)…** The launcher then:
    1. reads `default.xex` from the image and checks it's the USA Collector's Edition
       (SHA-256 `922c7a1a…bec1815`);
@@ -53,7 +54,7 @@ that stands in for the console. This fork keeps all of that and adds:
    5. builds the AI textures for this PC's GPU (about 7 minutes on a fast GPU).
 4. **PLAY.**
 
-Or without clicks: `./SpeedBreaker-Carbon-*.AppImage --setup /path/to/your.iso`.
+Or without clicks: `./NFSC-Linux-x86_64.AppImage --setup /path/to/your.iso`.
 
 **Needs:** x86-64 Linux, a CPU with AVX2 (Intel Haswell / AMD Zen or later), a Vulkan 1.2 GPU
 with BC texture support, about 8 GB of free space (5.4 GB game, ~2 GB AI textures) and ~1.5 GB of
@@ -65,6 +66,29 @@ folder works too, and a newer AppImage rebuilds the game automatically.
 
 Command line: `--setup <iso>`, `--play`, `--build-ai`, `--game <args>` (the built game program
 itself, e.g. `--where`).
+
+## Versions and updates
+
+nfsc-linux has its own version numbers, starting at **1.0.0** (it is based on SpeedBreaker: Carbon
+0.1.3, which the launcher's System page names). Releases are tagged `v<version>` here, and each one
+carries `NFSC-Linux-x86_64.AppImage` and its `.sha256`.
+
+- **Every time the launcher starts** it asks GitHub's API for this repository's newest release (one
+  request, with the system's `curl`; nothing else is sent). When it's newer, a banner offers
+  **Update now** and **What's new** (the release notes).
+- **Update now** downloads the new AppImage beside the running one, checks its size and SHA-256
+  against the release's `.sha256`, keeps the old one as `NFSC-Linux-x86_64.AppImage.previous` and
+  puts the new one in its place (same name: shortcuts keep working). **Restart now** starts it.
+  When the folder isn't writable, or the launcher isn't running from the AppImage, it opens the
+  download page instead.
+- After an update the game is rebuilt on the next PLAY (a minute or so), since the engine changed;
+  the installed game files, settings, saves and texture pack stay.
+- **System → Updates**: the version, **Check now**, and the switch for the check at startup.
+- The game's own *Check for Updates* (Settings > Advanced, in game) asks this repository too.
+
+To publish an update: raise `SB_VERSION_CARBON` in `CMakeLists.txt`, add its `## v<version>` entry
+to `CHANGELOG.md` (the game shows it once after updating), build the AppImage and attach
+`NFSC-Linux-x86_64.AppImage` and its `.sha256` to a release tagged `v<version>`.
 
 ## The launcher
 
@@ -123,7 +147,8 @@ with the flag cleared, so saves never record it.
 
 ## All changes, file by file
 
-Everything else is SpeedBreaker: Carbon v0.1.3 as released (commit `276cf59`).
+Everything else is SpeedBreaker: Carbon v0.1.3 as released (commit `276cf59`). The project's own
+history is in [CHANGELOG.md](CHANGELOG.md).
 
 **Engine (`runtime/`)**
 
@@ -134,20 +159,22 @@ Everything else is SpeedBreaker: Carbon v0.1.3 as released (commit `276cf59`).
 | `runtime/game/carbon/unlock_all.cpp` | New: `NFSMW_UNLOCK_ALL=1` (see *How it works*) and `NFSMW_UNLOCK_LOG=1` |
 | `runtime/kernel/xam.cpp` | DLC content: one folder per package under the data folder's `dlc/`, registered at startup |
 | `runtime/report/build_info.cpp` | Names x86-64-v4 builds in the log |
-| `runtime/CMakeLists.txt`, `recomp/CMakeLists.txt`, `CMakeLists.txt` | `SB_X86_LEVEL` (x86-64-v3 or -v4), xxHash include, `SB_EXTRAS` for the tools below |
+| `runtime/game/game_info.h` | The app is *NFSC Linux*; its releases (Check for Updates, issues) are this repository's |
+| `runtime/CMakeLists.txt`, `recomp/CMakeLists.txt`, `CMakeLists.txt` | `SB_X86_LEVEL` (x86-64-v3 or -v4), xxHash include, `SB_EXTRAS` for the tools below; nfsc-linux's version (`SB_VERSION_CARBON` 1.0.0, from SpeedBreaker: Carbon 0.1.3) and repository (`NFSC_GITHUB_REPO`) |
+| `CHANGELOG.md` | The v1.0.0 entry (the game's "What's new" note) |
 
 **New tools (`extras/`, built with `-DSB_EXTRAS=ON`)**
 
 | File | |
 |---|---|
-| `extras/launcher/` | `sb-launcher`: the GUI (SDL3 + Dear ImGui on Vulkan): `main.cpp` (pages, jobs), `gfx.cpp` (window), `hardware.cpp` (detection, tiers, recommendations), `settings_file.cpp` (reads and edits `settings.toml` in place), `content.cpp` (saves, mods, DLC, STFS), `xiso.cpp` (reads `default.xex` from a disc image), `process.cpp` (child processes) |
+| `extras/launcher/` | `sb-launcher`: the GUI (SDL3 + Dear ImGui on Vulkan): `main.cpp` (pages, jobs), `gfx.cpp` (window), `hardware.cpp` (detection, tiers, recommendations), `settings_file.cpp` (reads and edits `settings.toml` in place), `content.cpp` (saves, mods, DLC, STFS), `xiso.cpp` (reads `default.xex` from a disc image), `updater.cpp` (the release check, its JSON, versions), `process.cpp` (child processes) |
 | `extras/texpack/` | `sb-texpack`: `scan` (archives, TPKs, JDLZ/HUFF/RAWW, Xenos untiling, DXT decoding, keys) and `encode` (PNG to BC1/BC3 DDS with mips) |
 
 **AppImage (`scripts/appimage/`)**
 
 | File | |
 |---|---|
-| `make_appimage.sh` | Builds the AppImage (no game program inside) |
+| `make_appimage.sh` | Builds `NFSC-Linux-x86_64.AppImage` (no game program inside) |
 | `make_sdk.sh` | Packs the engine objects (v3 and v4), clang, lld, XenonRecomp, a sysroot (glibc, Linux and libstdc++ headers; C runtime) and link libraries |
 | `build-game.sh` | Run by the launcher on each PC: XenonRecomp, parallel compile, link |
 | `AppRun` | Chooses the bundled or system C/C++ runtime, NVIDIA PRIME offload, Steam Game Mode; starts the launcher or (`--game`) the PC's build |
@@ -193,7 +220,6 @@ build does. The unit tests: add `-DSB_TESTS=ON`, then `ctest --test-dir <build d
   3x internal resolution with the AI textures. Other distributions and GPUs are untested.
 - Most Wanted (`-DSB_GAME=mw`) shares the engine changes but wasn't built here (it needs that
   game's files).
-- The game's built-in *Check for Updates* asks upstream SpeedBreaker: Carbon's releases, not this fork's.
 - Linux x86-64 only; upstream's macOS, Windows, iOS and SteamOS builds are untouched but untested
   with these changes.
 

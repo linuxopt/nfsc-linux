@@ -40,8 +40,10 @@
 #define SB_GAME_GAMMA_OFF "Off: the flatter picture, without the ramp."
 #define SB_GAME_UNSUPPORTED " Other editions of the game (its standard edition, other regions) aren't supported yet."
 #define SB_GAME_SUPPORTED_DISC "SpeedBreaker: Carbon supports the USA Collector's Edition of Need for Speed: Carbon. Other editions aren't supported yet."
-#define SB_APP_NAME "SpeedBreaker: Carbon"
-#define SB_GITHUB_REPO "SpeedBreakerProject/speedbreaker-carbon"
+// nfsc-linux, a fork of SpeedBreaker: Carbon: its own name and releases
+// (CMakeLists.txt's NFSC_GITHUB_REPO; the launcher uses the same repository).
+#define SB_APP_NAME "NFSC Linux"
+#define SB_GITHUB_REPO "linuxopt/nfsc-linux"
 #define SB_FILE_PREFIX "speedbreaker-carbon"
 #define SB_WINDOWS_EXE "SpeedBreaker-Carbon.exe"
 #define SB_WINDOWS_LOGS "%LOCALAPPDATA%\\SpeedBreaker Carbon\\logs"

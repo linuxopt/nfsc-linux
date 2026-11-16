@@ -1,7 +1,7 @@
 #!/bin/bash
 # SpeedBreaker: Carbon as one AppImage for this person's own Linux PCs:
 #
-#   scripts/appimage/make_appimage.sh [options]
+#   scripts/appimage/make_appimage.sh [options]    -> <out>/NFSC-Linux-x86_64.AppImage (+ .sha256)
 #     --v3 <build dir>         x86-64-v3 build (default build/v3; needs -DSB_EXTRAS=ON)
 #     --v4 <build dir>         x86-64-v4 (AVX-512) build (default build/v4; optional)
 #     --realesrgan <dir>       Real-ESRGAN ncnn-vulkan (its binary and models/)
@@ -109,7 +109,7 @@ cp "$ROOT"/scripts/appimage/licenses/* "$SHARE/licenses/"
 # The source (GPL-3.0): the repository's files, with this build's changes (never the
 # git-ignored game files, generated code or toolchain).
 ( cd "$ROOT" && git ls-files -co --exclude-standard -z | tar --null -T - -cJf "$SHARE/source.tar.xz" --transform 's,^,speedbreaker-carbon/,' )
-echo "SpeedBreaker: Carbon $VERSION (AppImage, $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown))" > "$SHARE/VERSION"
+echo "NFSC Linux $VERSION (AppImage, $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown))" > "$SHARE/VERSION"
 
 # Everything copied from this machine's packages: their licenses and sources.
 "$ROOT/scripts/appimage/collect_licenses.sh" "$APPDIR" "$SHARE/licenses"
@@ -118,8 +118,8 @@ echo "SpeedBreaker: Carbon $VERSION (AppImage, $(git -C "$ROOT" rev-parse --shor
 cat > "$APPDIR/speedbreaker-carbon.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=SpeedBreaker: Carbon
-Comment=Need for Speed: Carbon (Xbox 360), native, with AI-enhanced textures
+Name=NFSC Linux
+Comment=Need for Speed: Carbon (Xbox 360), built natively from your own disc, with AI-enhanced textures
 Exec=sb-launcher
 Icon=speedbreaker-carbon
 Categories=Game;
@@ -137,7 +137,9 @@ ln -sf speedbreaker-carbon.png "$APPDIR/.DirIcon"
 # The AppImage runtime: the one inside appimagetool (an AppImage itself).
 OFFSET="$("$TOOL" --appimage-offset)"
 head -c "$OFFSET" "$TOOL" > "$OUT/runtime-x86_64"
-OUTFILE="$OUT/SpeedBreaker-Carbon-$VERSION-x86_64.AppImage"
+# A stable name (the launcher's updater replaces the file in place, so
+# shortcuts to it keep working); the version is inside (usr/share/.../VERSION).
+OUTFILE="$OUT/NFSC-Linux-x86_64.AppImage"
 ARCH=x86_64 "$TOOL" --no-appstream --runtime-file "$OUT/runtime-x86_64" --comp zstd "$APPDIR" "$OUTFILE" >&2
 ( cd "$OUT" && sha256sum "$(basename "$OUTFILE")" > "$(basename "$OUTFILE").sha256" )
 echo "$OUTFILE"

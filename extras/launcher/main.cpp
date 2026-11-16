@@ -8,6 +8,7 @@
 //   sb-launcher            the window
 //   sb-launcher --play     start the game at once (with the pack and mods)
 //   sb-launcher --build-ai build the AI texture pack without the window
+//   sb-launcher --update   install a newer release if there is one, then exit
 //   sb-launcher --setup <disc image>  the first run without the clicks: build
 //                          the game for this PC, install it, build the AI textures
 //
@@ -19,6 +20,7 @@
 #include "process.h"
 #include "settings_file.h"
 #include "xiso.h"
+#include "updater.h"
 
 #include <install/sha256.h>
 
@@ -41,6 +43,7 @@
 #include <optional>
 #include <thread>
 
+#include <sys/stat.h>
 #include <unistd.h>
 
 namespace fs = std::filesystem;
@@ -151,6 +154,16 @@ namespace
 
         Job job;
         Process game;
+
+        // Updates (updater.h): the startup check, and the release it found.
+        enum class Upd { Idle, Checking, Current, Available, Failed, Installed };
+        Upd upd = Upd::Idle;
+        Process updateProc;
+        std::vector<std::string> updateLines;
+        update::Release latest;
+        std::string updateMessage;
+        bool updateDismissed = false, showNotes = false, restartRequested = false;
+        std::string appImagePath = Env("APPIMAGE");  // set by the AppImage runtime
         bool gameRunning = false;
         Page page = Page::Play;
         std::string notice;
@@ -821,6 +834,232 @@ namespace
             proc.Start({ "/usr/bin/xdg-open", p.string() });
         }
 
+        // ---- updates ----
+        bool CheckAtStart() const { return state.Get("update_check", "true") == "true"; }
+        // This launcher's version (NFSC_TEST_VERSION=<x.y.z> pretends to be another: tests).
+        static std::string RunningVersion()
+        {
+            static const std::string v = [] {
+                std::string t = Env("NFSC_TEST_VERSION");
+                return !t.empty() && update::Valid(t) ? t : std::string(NFSC_VERSION);
+            }();
+            return v;
+        }
+
+        void StartUpdateCheck()
+        {
+            if (upd == Upd::Checking)
+                return;
+            std::string curl = update::FindCurl();
+            if (curl.empty())
+            {
+                upd = Upd::Failed;
+                updateMessage = "Checking for updates needs curl, which this system doesn't have.";
+                return;
+            }
+            updateLines.clear();
+            // One GET of the newest release; the HTTP status on the last line.
+            if (!updateProc.Start({ curl, "-q", "-sS", "-L", "--max-time", "15", "--connect-timeout", "8",
+                    "-H", "Accept: application/vnd.github+json", "-H", "X-GitHub-Api-Version: 2022-11-28",
+                    "-A", "nfsc-linux-launcher/" + RunningVersion(), "-w", "\n%{http_code}", update::kApiUrl }))
+            {
+                upd = Upd::Failed;
+                updateMessage = "Couldn't start curl.";
+                return;
+            }
+            upd = Upd::Checking;
+        }
+
+        void PollUpdate()
+        {
+            if (upd != Upd::Checking)
+                return;
+            for (auto& l : updateProc.Poll())
+                updateLines.push_back(std::move(l));
+            if (updateProc.Running())
+                return;
+            for (auto& l : updateProc.Poll())
+                updateLines.push_back(std::move(l));
+            int status = 0;
+            if (!updateLines.empty())
+            {
+                status = std::atoi(updateLines.back().c_str());
+                updateLines.pop_back();
+            }
+            std::string json;
+            for (const std::string& l : updateLines)
+                json += l + "\n";
+            state.Set("update_last_check", std::to_string(std::time(nullptr)));
+            if (updateProc.ExitCode() != 0 || status == 0)
+            {
+                upd = Upd::Failed;
+                updateMessage = "Couldn't reach GitHub to check for updates (offline?).";
+                Log("update: " + updateMessage);
+                return;
+            }
+            if (status == 404)
+            {
+                upd = Upd::Current;
+                updateMessage = "No release published yet.";
+                return;
+            }
+            std::string error;
+            if (status != 200 || !update::ParseRelease(json, latest, error))
+            {
+                upd = Upd::Failed;
+                updateMessage = status != 200 ? std::format("GitHub answered {} to the update check.", status) : error;
+                Log("update: " + updateMessage);
+                return;
+            }
+            if (!update::Valid(latest.tag) || latest.draft || latest.prerelease || update::Compare(latest.tag, RunningVersion()) <= 0)
+            {
+                upd = Upd::Current;
+                updateMessage = std::format("Up to date (v{}; newest release {}).", RunningVersion(), latest.tag);
+                return;
+            }
+            upd = Upd::Available;
+            updateMessage = std::format("NFSC Linux {} is out (this is v{}).", latest.tag, RunningVersion());
+            Log("update: " + updateMessage);
+        }
+
+        // Download the new AppImage beside the running one, check it, swap it in.
+        void StartUpdateInstall()
+        {
+            if (job.active || gameRunning || upd != Upd::Available)
+                return;
+            const update::Asset* asset = latest.Find(update::kAssetSuffix);
+            if (!asset || appImagePath.empty())
+            {
+                OpenUrl(latest.url.empty() ? update::kReleasesPage : latest.url);
+                return;
+            }
+            fs::path target = appImagePath;
+            if (access(target.parent_path().c_str(), W_OK) != 0)
+            {
+                notice = "Can't update in place: " + target.parent_path().string() + " isn't writable. The download page is open.";
+                OpenUrl(latest.url);
+                return;
+            }
+            std::string curl = update::FindCurl();
+            const update::Asset* sha = latest.Find(".AppImage.sha256");
+            fs::path tmp = target.string() + ".download", tmpSha = target.string() + ".download.sha256";
+            update::Asset a = *asset;
+            update::Asset s = sha ? *sha : update::Asset{};
+            std::string tag = latest.tag;
+            job = {};
+            job.name = "Updating to " + tag;
+            job.steps.push_back({ std::format("Downloading {} ({})", a.name, FormatBytes(a.size)),
+                [=] { return std::vector<std::string>{ curl, "-q", "-sS", "-L", "--fail", "--connect-timeout", "20", "-o", tmp.string(), a.url }; },
+                {}, {},
+                [=] { std::error_code ec; uint64_t n = fs::exists(tmp) ? fs::file_size(tmp, ec) : 0; return a.size ? float(n) / float(a.size) : -1.0f; },
+                {}, [](int code, std::string& msg) { if (code) msg = "the download failed"; return code == 0; } });
+            if (sha)
+                job.steps.push_back({ "Downloading its checksum",
+                    [=] { return std::vector<std::string>{ curl, "-q", "-sS", "-L", "--fail", "--connect-timeout", "20", "-o", tmpSha.string(), s.url }; },
+                    {}, {}, {}, {}, [](int code, std::string& msg) { if (code) msg = "the checksum download failed"; return code == 0; } });
+            job.steps.push_back({ "Checking and installing it", {},
+                [=, this](std::string& msg) {
+                    std::error_code ec;
+                    if (a.size && fs::file_size(tmp, ec) != a.size)
+                    {
+                        msg = "the download is the wrong size";
+                        fs::remove(tmp, ec);
+                        return false;
+                    }
+                    if (sha)
+                    {
+                        std::ifstream sf(tmpSha);
+                        std::string want;
+                        sf >> want;
+                        install::Sha256 h;
+                        std::ifstream in(tmp, std::ios::binary);
+                        std::vector<char> buf(1 << 20);
+                        while (in.read(buf.data(), std::streamsize(buf.size())) || in.gcount() > 0)
+                            h.Update(buf.data(), size_t(in.gcount()));
+                        install::Sha256Digest d = h.Finish();
+                        std::string got;
+                        for (uint8_t b : d) got += std::format("{:02x}", b);
+                        fs::remove(tmpSha, ec);
+                        if (got != want)
+                        {
+                            msg = "the download doesn't match its checksum: nothing was changed";
+                            fs::remove(tmp, ec);
+                            return false;
+                        }
+                    }
+                    chmod(tmp.c_str(), 0755);
+                    fs::path previous = target.string() + ".previous";
+                    fs::remove(previous, ec);
+                    fs::rename(target, previous, ec);
+                    if (ec) { msg = "can't move the current AppImage aside: " + ec.message(); return false; }
+                    fs::rename(tmp, target, ec);
+                    if (ec)
+                    {
+                        std::error_code ec2;
+                        fs::rename(previous, target, ec2);
+                        msg = "can't put the new AppImage in place: " + ec.message();
+                        return false;
+                    }
+                    upd = Upd::Installed;
+                    updateMessage = std::format("Updated to {}. Restart the launcher to use it (the old one is kept as {}).", tag, previous.filename().string());
+                    return true;
+                } });
+            job.finished = [this](bool ok) { if (ok) notice = updateMessage; };
+            BeginJob();
+        }
+
+        static void OpenUrl(const std::string& url)
+        {
+            Process p;
+            p.Start({ "/usr/bin/xdg-open", url });
+        }
+
+        void UiUpdateBanner()
+        {
+            if (updateDismissed || (upd != Upd::Available && upd != Upd::Installed))
+                return;
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f, 0.22f, 0.12f, 1));
+            ImGui::BeginChild("##update", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 1.6f), ImGuiChildFlags_Borders);
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted(updateMessage.c_str());
+            ImGui::SameLine();
+            if (upd == Upd::Available)
+            {
+                bool inPlace = !appImagePath.empty() && latest.Find(update::kAssetSuffix);
+                if (ImGui::SmallButton(inPlace ? "Update now" : "Open download page"))
+                    StartUpdateInstall();
+                ImGui::SameLine();
+                if (ImGui::SmallButton("What's new"))
+                    showNotes = true;
+            }
+            else if (ImGui::SmallButton("Restart now"))
+                restartRequested = true;
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Later"))
+                updateDismissed = true;
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
+            if (showNotes)
+            {
+                ImGui::OpenPopup("What's new");
+                showNotes = false;
+            }
+            ImGui::SetNextWindowSize(ImVec2(ImGui::GetFontSize() * 40, ImGui::GetFontSize() * 26), ImGuiCond_Appearing);
+            if (ImGui::BeginPopupModal("What's new"))
+            {
+                ImGui::Text("%s", latest.name.empty() ? latest.tag.c_str() : latest.name.c_str());
+                ImGui::BeginChild("##notes", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() * 1.2f), ImGuiChildFlags_Borders);
+                ImGui::TextWrapped("%s", latest.body.c_str());
+                ImGui::EndChild();
+                if (ImGui::Button("Close"))
+                    ImGui::CloseCurrentPopup();
+                ImGui::SameLine();
+                if (ImGui::Button("Open the release page"))
+                    OpenUrl(latest.url);
+                ImGui::EndPopup();
+            }
+        }
+
         // ---- UI ----
         void Ui();
         void UiPlay();
@@ -833,6 +1072,7 @@ namespace
         void UiDlc();
         void UiSystem();
         void UiJob();
+        void UiUpdates();
     };
 
     // Big accent button.
@@ -872,9 +1112,9 @@ namespace
         float side = ImGui::GetFontSize() * 11;
         ImGui::BeginChild("##nav", ImVec2(side, 0), ImGuiChildFlags_Borders);
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.55f, 0.15f, 1));
-        ImGui::TextUnformatted("SPEEDBREAKER");
+        ImGui::TextUnformatted("NFSC LINUX");
         ImGui::PopStyleColor();
-        ImGui::TextUnformatted("Carbon");
+        ImGui::TextDisabled("v" NFSC_VERSION);
         ImGui::Separator();
         struct Nav { Page page; const char* label; };
         const Nav nav[] = { { Page::Play, "Play" }, { Page::Graphics, "Graphics" }, { Page::Ai, "AI Textures" }, { Page::Controls, "Controls" },
@@ -894,6 +1134,7 @@ namespace
         ImGui::EndChild();
         ImGui::SameLine();
         ImGui::BeginChild("##page", ImVec2(0, 0));
+        UiUpdateBanner();
         if (!notice.empty())
         {
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.15f, 0.2f, 1));
@@ -1455,8 +1696,46 @@ namespace
             ImGui::TextDisabled("None added.");
     }
 
+    void App::UiUpdates()
+    {
+        ImGui::SeparatorText("Updates");
+        ImGui::Text("NFSC Linux v%s (based on SpeedBreaker: Carbon 0.1.3), from github.com/%s", RunningVersion().c_str(), NFSC_GITHUB_REPO);
+        bool atStart = CheckAtStart();
+        if (ImGui::Checkbox("Check for updates each time the launcher starts", &atStart))
+            state.Set("update_check", atStart ? "true" : "false");
+        Help("One request to GitHub's releases API for this project's newest release, nothing else.");
+        if (ImGui::Button("Check now") && upd != Upd::Checking)
+        {
+            updateDismissed = false;
+            StartUpdateCheck();
+        }
+        ImGui::SameLine();
+        if (upd == Upd::Checking)
+            ImGui::TextDisabled("Asking GitHub...");
+        else if (!updateMessage.empty())
+            ImGui::TextUnformatted(updateMessage.c_str());
+        if (upd == Upd::Available)
+        {
+            if (BigButton(appImagePath.empty() ? "Open the download page" : "Update now", ImVec2(0, 0), !job.active && !gameRunning))
+                StartUpdateInstall();
+            ImGui::SameLine();
+            if (ImGui::Button("What's new"))
+            {
+                updateDismissed = false;
+                showNotes = true;
+            }
+        }
+        if (appImagePath.empty())
+            ImGui::TextDisabled("Not running as an AppImage: updates open the download page instead.");
+        else if (fs::exists(appImagePath + ".previous"))
+        {
+            ImGui::TextDisabled("The version before the last update: %s.previous", fs::path(appImagePath).filename().string().c_str());
+        }
+    }
+
     void App::UiSystem()
     {
+        UiUpdates();
         ImGui::SeparatorText("This computer");
         ImGui::TextUnformatted(hw.Describe().c_str());
         ImGui::Text("Tier: %s   Free space: %s", TierName(hw.tier), FormatBytes(hw.freeDisk).c_str());
@@ -1500,13 +1779,16 @@ int main(int argc, char** argv)
     std::vector<std::string> args(argv + 1, argv + argc);
     bool headlessPlay = std::find(args.begin(), args.end(), "--play") != args.end();
     bool headlessAi = std::find(args.begin(), args.end(), "--build-ai") != args.end();
+    // --update: check for a newer release, install it if there is one, then exit.
+    bool headlessUpdate = std::find(args.begin(), args.end(), "--update") != args.end();
+    bool updateStarted = false;
     // --setup <disc image>: the whole first run without the clicks (build, install, AI textures).
     std::string setupImage;
     if (auto it = std::find(args.begin(), args.end(), "--setup"); it != args.end() && it + 1 != args.end())
         setupImage = *(it + 1);
 
     std::string error;
-    if (!gfx::Init("SpeedBreaker: Carbon", 1100, 700, app.hw, error))
+    if (!gfx::Init("NFSC Linux", 1100, 700, app.hw, error))
     {
         fprintf(stderr, "[launcher] %s\n", error.c_str());
         // No window: start the game straight away (it says what's wrong itself).
@@ -1543,6 +1825,9 @@ int main(int argc, char** argv)
         app.AutoTune(true);
     if (!app.hw.x86_64_v3)
         app.notice = "This CPU lacks AVX2 (x86-64-v3): the game needs an Intel Haswell / AMD Zen or newer CPU.";
+    // Updates: GitHub's newest release, each time the launcher starts (System > Updates).
+    if (headlessUpdate || (app.CheckAtStart() && setupImage.empty() && !headlessAi && !headlessPlay))
+        app.StartUpdateCheck();
     if (!setupImage.empty())
         app.StartSetup(setupImage);
     else if (headlessAi)
@@ -1577,6 +1862,22 @@ int main(int argc, char** argv)
         app.HandleDialog();
         app.PollJob();
         app.PollGame();
+        app.PollUpdate();
+        if (app.restartRequested)
+            quit = true;
+        if (headlessUpdate && app.upd != App::Upd::Checking && !app.job.active)
+        {
+            if (app.upd == App::Upd::Available && !updateStarted)
+            {
+                updateStarted = true;
+                app.StartUpdateInstall();
+            }
+            else
+            {
+                fprintf(stderr, "[launcher] update: %s\n", app.updateMessage.c_str());
+                quit = true;
+            }
+        }
         if ((headlessAi || !setupImage.empty()) && !app.job.active)
             quit = true;
         if (!gfx::BeginFrame())
@@ -1593,5 +1894,15 @@ int main(int argc, char** argv)
         app.job.proc.Stop();
     app.SaveSettings();
     gfx::Shutdown();
+    // Restart now: the updated AppImage, with the same arguments.
+    if (app.restartRequested && !app.appImagePath.empty())
+    {
+        std::vector<std::string> again = { app.appImagePath };
+        again.insert(again.end(), args.begin(), args.end());
+        std::vector<char*> cargs;
+        for (auto& a : again) cargs.push_back(a.data());
+        cargs.push_back(nullptr);
+        execv(app.appImagePath.c_str(), cargs.data());
+    }
     return 0;
 }

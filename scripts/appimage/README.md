@@ -1,6 +1,6 @@
 # SpeedBreaker: Carbon AppImage
 
-One file, `SpeedBreaker-Carbon-<version>-x86_64.AppImage`, that turns your own Xbox 360 disc image of
+One file, `NFSC-Linux-x86_64.AppImage` (nfsc-linux 1.0.0 and later; the version is on the launcher's System page), that turns your own Xbox 360 disc image of
 Need for Speed: Carbon (USA Collector's Edition) into a native Linux game on any x86-64 PC with an
 AVX2 CPU and a Vulkan 1.2 GPU, built for that PC.
 
@@ -22,7 +22,7 @@ upscaler. Every player needs their own disc image; the game is made from it on e
    5. builds the **AI textures** for the PC's GPU.
 3. **PLAY**.
 
-Scripted: `SpeedBreaker-Carbon-*.AppImage --setup /path/to/your.iso` does all of it without
+Scripted: `NFSC-Linux-x86_64.AppImage --setup /path/to/your.iso` does all of it without
 clicks. The build lives in `~/.local/share/speedbreaker-carbon/engine/<cpu>/`, one per CPU
 model, so a home folder shared between PCs (NFS, Syncthing) keeps a build for each CPU. A newer
 AppImage (a newer engine) rebuilds it automatically the next time you press PLAY.
@@ -36,7 +36,7 @@ AppImage (a newer engine) rebuilds it automatically the next time you press PLAY
 | Saves | Back up, restore, import, export, delete; a save editor (find a 32-bit value such as cash, narrow it down, set it) |
 | Mods | Add (folder or archive), enable/disable, order, remove |
 | DLC | Add your own Xbox 360 Marketplace packages (CON/LIVE files) or folders; remove |
-| System | Hardware report, which GPU the game uses, **Rebuild the game for this PC**, data/log folders |
+| System | **Updates** (version, check now, check at startup), hardware report, which GPU the game uses, **Rebuild the game for this PC**, data/log folders |
 
 Command line: `--setup <iso>` (the whole first run), `--play` (straight into the game),
 `--build-ai` (build the AI textures, then exit), `--game <args>` (this PC's game program itself:

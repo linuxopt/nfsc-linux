@@ -1,8 +1,25 @@
 # Changelog
 
-What changed in each SpeedBreaker: Carbon release, newest first. Each release's notes on GitHub
-start from its entry here, and the game shows the entry once, the first time a new version starts
-(offline: it's built into the game).
+What changed in each release, newest first: nfsc-linux's (from v1.0.0), then those of
+SpeedBreaker: Carbon, the project it's a fork of (v0.1.3 and earlier). Each release's notes on
+GitHub start from its entry here, and the game shows the entry once, the first time a new version
+starts (offline: it's built into the game).
+
+## v1.0.0
+
+The first release of nfsc-linux, a Linux fork of SpeedBreaker: Carbon 0.1.3, with its own
+versions and updates (github.com/linuxopt/nfsc-linux).
+
+### What's new
+
+- **Built on your PC from your disc image:** one AppImage, with no game code inside, that
+  translates and compiles the game for your CPU, installs it and builds its AI textures.
+- **AI-upscaled textures:** about 2,600 of the game's textures, upscaled on your GPU.
+- **A launcher:** graphics, AI textures, controls, saves, mods, DLC and system pages, with
+  settings tuned to your hardware.
+- **Updates:** the launcher checks this project's newest release each time it starts and
+  updates the AppImage in place (System > Updates turns the check off).
+- **Unlock all** (off by default) and your own Xbox 360 DLC packages.
 
 ## v0.1.3
 

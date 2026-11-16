@@ -119,7 +119,7 @@ cp -r "$ROOT/config/carbon" "$OUT/config/carbon"
 cat > "$OUT/SDK" <<EOF
 clang $CLANG_VER ($("$CLANG" --version | head -1)), lld, XenonRecomp (patched: tools/XenonRecomp, branch nfsmw)
 gcc runtime $GCC_TRIPLE $GCC_VER
-engine: SpeedBreaker $(sed -n 's/^set(SB_VERSION_CARBON \([0-9.]*\)).*/\1/p' "$ROOT/CMakeLists.txt") $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null)$(git -C "$ROOT" diff --quiet 2>/dev/null || echo -dirty) built $(date -u +%FT%TZ)
+engine: NFSC Linux $(sed -n 's/^set(SB_VERSION_CARBON \([0-9.]*\)).*/\1/p' "$ROOT/CMakeLists.txt") $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null)$(git -C "$ROOT" diff --quiet 2>/dev/null || echo -dirty) built $(date -u +%FT%TZ)
 clang_version=$CLANG_VER
 gcc_triple=$GCC_TRIPLE
 gcc_version=$GCC_VER
