@@ -155,8 +155,20 @@ if(APPLE AND NOT IOS)
     add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX,OBJC,OBJCXX>:-Werror=unguarded-availability-new>")
 endif()
 
+# The x86-64 level the game's code is compiled for: x86-64-v3 (AVX2, the
+# release's) or x86-64-v4 (AVX-512: the AppImage carries both and picks by
+# the CPU it runs on).
+set(SB_X86_LEVEL "x86-64-v3" CACHE STRING "x86-64-v3 or x86-64-v4")
+set_property(CACHE SB_X86_LEVEL PROPERTY STRINGS x86-64-v3 x86-64-v4)
+
 add_subdirectory(recomp)
 add_subdirectory(runtime)
+
+# The AppImage's launcher and the AI texture pack tool (extras/).
+option(SB_EXTRAS "Build the launcher (sb-launcher) and texture pack tool (sb-texpack)" OFF)
+if(SB_EXTRAS)
+    add_subdirectory(extras)
+endif()
 
 option(SB_TESTS "Build the unit tests (tests/)" OFF)
 if(SB_TESTS)
