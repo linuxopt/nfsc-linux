@@ -5,6 +5,18 @@ SpeedBreaker: Carbon, the project it's a fork of (v0.1.3 and earlier). Each rele
 GitHub start from its entry here, and the game shows the entry once, the first time a new version
 starts (offline: it's built into the game).
 
+## v1.1.0
+
+### What's new
+
+- **The game's own icons:** the launcher takes Need for Speed: Carbon's title icon and its
+  achievement icons from your disc's `default.xex` and AI-upscales them 4x with Real-ESRGAN. They
+  mark the launcher's pages and sit in its sidebar and on the Play page. They are also the
+  launcher's and the game's title bar and taskbar icon. No icon ships with the AppImage: each PC
+  takes them from its own disc.
+- **Applications menu entry:** *NFSC Linux*, with the game's icon, starts the AppImage (System >
+  Desktop turns it off).
+
 ## v1.0.0
 
 The first release of nfsc-linux, a Linux fork of SpeedBreaker: Carbon 0.1.3, with its own

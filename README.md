@@ -37,6 +37,7 @@ that stands in for the console. This fork keeps all of that and adds:
 | **Mods** | Texture mods and file-replacement mods, enabled and ordered in the launcher. |
 | **DLC** | Your own Xbox 360 Marketplace packages (CON/LIVE) unpacked and offered to the game. |
 | **Its own versions and updates** | nfsc-linux is versioned on its own (from 1.0.0). The launcher checks this repository's newest release every time it starts and updates the AppImage in place; the game's *Check for Updates* asks this repository too. |
+| **The game's own icons** | The title icon and achievement icons come from each player's `default.xex`, AI-upscaled 4x. They are the launcher's page icons, the title bar and taskbar icon of both windows, and the icon of an applications menu entry. None ship with the AppImage. |
 | **Unlock all** (opt-in) | The game's own debug "unlock all things" flag, plus the DLC check, for every car, part and race. Off by default; saves never record it. |
 
 ## Download and play
@@ -101,7 +102,13 @@ to `CHANGELOG.md` (the game shows it once after updating), build the AppImage an
 | **Saves** | Back up, restore, import, export, delete (always backed up first); a save editor that finds a 32-bit value (cash, say), narrows it down and sets it |
 | **Mods** | Add from a folder or archive, enable, reorder, remove |
 | **DLC** | Add your Marketplace packages or folders; remove |
-| **System** | Hardware report, which GPU the game uses, rebuild the game, folders |
+| **System** | Hardware report, which GPU the game uses, the applications menu entry, rebuild the game, folders |
+
+Each page has an icon from the game itself: the launcher takes the disc's title icon and its
+achievement icons from the installed `default.xex` (the XDBF resource the Xbox dashboard shows)
+and upscales them 4x with Real-ESRGAN, once per computer, in a few seconds. The same title icon is
+the launcher's and the game's title bar and taskbar icon (window class `nfsc-linux`) and the icon
+of the applications menu entry, `~/.local/share/applications/nfsc-linux.desktop`.
 
 ### Auto-tuning
 
@@ -159,15 +166,16 @@ history is in [CHANGELOG.md](CHANGELOG.md).
 | `runtime/game/carbon/unlock_all.cpp` | New: `NFSMW_UNLOCK_ALL=1` (see *How it works*) and `NFSMW_UNLOCK_LOG=1` |
 | `runtime/kernel/xam.cpp` | DLC content: one folder per package under the data folder's `dlc/`, registered at startup |
 | `runtime/report/build_info.cpp` | Names x86-64-v4 builds in the log |
-| `runtime/game/game_info.h` | The app is *NFSC Linux*; its releases (Check for Updates, issues) are this repository's |
-| `runtime/CMakeLists.txt`, `recomp/CMakeLists.txt`, `CMakeLists.txt` | `SB_X86_LEVEL` (x86-64-v3 or -v4), xxHash include, `SB_EXTRAS` for the tools below; nfsc-linux's version (`SB_VERSION_CARBON` 1.0.0, from SpeedBreaker: Carbon 0.1.3) and repository (`NFSC_GITHUB_REPO`) |
-| `CHANGELOG.md` | The v1.0.0 entry (the game's "What's new" note) |
+| `runtime/game/game_info.h` | The app is *NFSC Linux*; its releases (Check for Updates, issues) are this repository's; its window class is `nfsc-linux` |
+| `runtime/main.cpp`, `runtime/video/presenter.cpp` | The window class (`SB_APP_ID`) and the title bar icon from `NFSC_WINDOW_ICON` (the launcher's, from the disc) |
+| `runtime/CMakeLists.txt`, `recomp/CMakeLists.txt`, `CMakeLists.txt` | `SB_X86_LEVEL` (x86-64-v3 or -v4), xxHash include, `SB_EXTRAS` for the tools below; nfsc-linux's version (`SB_VERSION_CARBON` 1.1.0, from SpeedBreaker: Carbon 0.1.3) and repository (`NFSC_GITHUB_REPO`) |
+| `CHANGELOG.md` | The v1.0.0 and v1.1.0 entries (the game's "What's new" note) |
 
 **New tools (`extras/`, built with `-DSB_EXTRAS=ON`)**
 
 | File | |
 |---|---|
-| `extras/launcher/` | `sb-launcher`: the GUI (SDL3 + Dear ImGui on Vulkan): `main.cpp` (pages, jobs), `gfx.cpp` (window), `hardware.cpp` (detection, tiers, recommendations), `settings_file.cpp` (reads and edits `settings.toml` in place), `content.cpp` (saves, mods, DLC, STFS), `xiso.cpp` (reads `default.xex` from a disc image), `updater.cpp` (the release check, its JSON, versions), `process.cpp` (child processes) |
+| `extras/launcher/` | `sb-launcher`: the GUI (SDL3 + Dear ImGui on Vulkan): `main.cpp` (pages, jobs), `gfx.cpp` (window), `hardware.cpp` (detection, tiers, recommendations), `settings_file.cpp` (reads and edits `settings.toml` in place), `content.cpp` (saves, mods, DLC, STFS), `xiso.cpp` (reads `default.xex` from a disc image), `updater.cpp` (the release check, its JSON, versions), `icons.cpp` (the game's icons from `default.xex`, the app icon sizes, the applications menu entry), `process.cpp` (child processes) |
 | `extras/texpack/` | `sb-texpack`: `scan` (archives, TPKs, JDLZ/HUFF/RAWW, Xenos untiling, DXT decoding, keys) and `encode` (PNG to BC1/BC3 DDS with mips) |
 
 **AppImage (`scripts/appimage/`)**

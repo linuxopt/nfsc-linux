@@ -3,6 +3,9 @@
 #pragma once
 #include "hardware.h"
 
+#include <string>
+#include <vector>
+
 struct SDL_Window;
 
 namespace launcher::gfx
@@ -14,4 +17,6 @@ namespace launcher::gfx
     void EndFrame();
     void Shutdown();
     SDL_Window* Window();
+    // The title bar's (and taskbar's) icon: PNGs, the largest first.
+    bool SetWindowIcon(const std::vector<std::string>& pngs);
 }

@@ -41,8 +41,34 @@ namespace launcher::gfx
 
     SDL_Window* Window() { return s_window; }
 
+    bool SetWindowIcon(const std::vector<std::string>& pngs)
+    {
+        SDL_Surface* icon = nullptr;
+        for (const std::string& path : pngs)
+        {
+            SDL_Surface* s = SDL_LoadPNG(path.c_str());
+            if (!s)
+                continue;
+            if (!icon)
+                icon = s;
+            else
+            {
+                SDL_AddSurfaceAlternateImage(icon, s);
+                SDL_DestroySurface(s);
+            }
+        }
+        if (!icon)
+            return false;
+        bool ok = SDL_SetWindowIcon(s_window, icon);
+        SDL_DestroySurface(icon);
+        return ok;
+    }
+
     bool Init(const char* title, int w, int h, Hardware& hw, std::string& error)
     {
+        // The window's class (X11's WM_CLASS, Wayland's app_id): the
+        // applications menu entry's (icons.h), so taskbars show its icon.
+        SDL_SetAppMetadata(title, nullptr, "nfsc-linux");
         if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
         {
             error = std::format("SDL: {}", SDL_GetError());
@@ -155,10 +181,10 @@ namespace launcher::gfx
         dci.ppEnabledExtensionNames = devExt;
         Check(vkCreateDevice(s_physical, &dci, nullptr, &s_device));
         vkGetDeviceQueue(s_device, s_queueFamily, 0, &s_queue);
-        VkDescriptorPoolSize poolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16 };
+        VkDescriptorPoolSize poolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 64 };  // the fonts and the game's icons
         VkDescriptorPoolCreateInfo dpci{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
         dpci.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-        dpci.maxSets = 16;
+        dpci.maxSets = 64;
         dpci.poolSizeCount = 1;
         dpci.pPoolSizes = &poolSize;
         Check(vkCreateDescriptorPool(s_device, &dpci, nullptr, &s_pool));

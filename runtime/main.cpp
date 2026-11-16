@@ -338,7 +338,7 @@ int main(int argc, char** argv)
         migrated += std::format("[paths] portable mode: {} can't be written ({}): settings and saves won't be kept\n",
             portableLayout.data.string(), strerror(portableError));
     // The name volume mixers and the desktop show (before SDL starts).
-    SDL_SetAppMetadata(SB_APP_NAME, report::BuildString(), nullptr);
+    SDL_SetAppMetadata(SB_APP_NAME, report::BuildString(), SB_APP_ID);
     if (std::optional<int> code = install::RunInstallCommand(argc, argv))
     {
         fputs(migrated.c_str(), stderr);

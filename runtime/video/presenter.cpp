@@ -3772,6 +3772,20 @@ void main()
             fprintf(stderr, "[video] SDL_CreateWindow: %s\n", SDL_GetError());
             return false;
         }
+#if defined(__linux__) && !defined(__ANDROID__)
+        // The title bar's icon: the game's own, which the AppImage's launcher
+        // takes from the player's disc (extras/launcher/icons.h).
+        if (const char* iconPath = getenv("NFSC_WINDOW_ICON"); iconPath && *iconPath)
+        {
+            if (SDL_Surface* icon = SDL_LoadPNG(iconPath))
+            {
+                SDL_SetWindowIcon(s_window, icon);
+                SDL_DestroySurface(icon);
+            }
+            else
+                fprintf(stderr, "[video] window icon %s: %s\n", iconPath, SDL_GetError());
+        }
+#endif
 #if defined(__APPLE__) && !TARGET_OS_IOS
         // The title bar over the picture (platform/macos_window.h); a window
         // made fullscreen gets it when it leaves fullscreen.

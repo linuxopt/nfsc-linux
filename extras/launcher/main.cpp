@@ -17,6 +17,7 @@
 #include "content.h"
 #include "gfx.h"
 #include "hardware.h"
+#include "icons.h"
 #include "process.h"
 #include "settings_file.h"
 #include "xiso.h"
@@ -27,6 +28,7 @@
 #include <user/key_names.h>
 
 #include <imgui.h>
+#include <imgui_internal.h>  // RegisterUserTexture (the game's icons)
 #include <imgui_impl_sdl3.h>
 #include <SDL3/SDL.h>
 
@@ -140,7 +142,7 @@ namespace
         fs::path appDir, dataDir, cacheDir;
         fs::path sdkDir, buildScript;
         std::string sdkStamp;
-        fs::path gameBin, texpackBin, esrganBin, esrganModels, settingsTemplate, fontPath;
+        fs::path gameBin, texpackBin, esrganBin, esrganModels, settingsTemplate, fontPath, bundledIcon;
         std::string loader, libs;
         Hardware hw;
         State state;
@@ -184,6 +186,14 @@ namespace
         std::vector<DlcEntry> dlc;
         bool confirmDelete = false;
 
+        // The game's own icons (icons.h): from the installed default.xex,
+        // upscaled with Real-ESRGAN, as textures for the pages.
+        struct IconTex { uint32_t size = 0; ImTextureData* tex = nullptr; };
+        std::map<uint32_t, IconTex> iconTex;  // by XDBF id (kTitle | kBig: the large title icon)
+        static constexpr uint32_t kBig = 0x10000;
+        bool iconsTried = false, iconsUpscaling = false, iconsReady = false;
+        Process iconProc;
+
         void Log(const std::string& s)
         {
             fprintf(stderr, "[launcher] %s\n", s.c_str());  // the terminal too (--setup, --update)
@@ -217,6 +227,8 @@ namespace
             esrganModels = esrganBin.empty() ? fs::path() : esrganBin.parent_path() / "models";
             settingsTemplate = first({ share / "settings-template.toml", exeDir / "settings-template.toml" });
             fontPath = first({ share / "Roboto-Medium.ttf", exeDir / "Roboto-Medium.ttf" });
+            // The AppImage's own icon: the title bar's until the game's icons are in.
+            bundledIcon = first({ appDir / "speedbreaker-carbon.png", appDir / "usr/share/icons/hicolor/256x256/apps/speedbreaker-carbon.png" });
             // The SDK the game is built with on this PC (scripts/appimage/make_sdk.sh).
             sdkDir = first({ lib / "sdk", exeDir / "sdk" });
             buildScript = sdkDir.empty() ? fs::path() : sdkDir / "build-game.sh";
@@ -695,6 +707,152 @@ namespace
             return std::max(0.0f, job.parsed);
         }
 
+        // ---- the game's icons ----
+        fs::path IconDir() const { return dataDir / "icons"; }
+        static constexpr uint32_t kIconIds[] = { icons::kTitle, icons::kPlay, icons::kGraphics, icons::kAi, icons::kControls,
+            icons::kSaves, icons::kMods, icons::kDlc, icons::kSystem, icons::kUpdate };
+
+        ImTextureData* Icon(uint32_t id) const
+        {
+            auto it = iconTex.find(id);
+            return it == iconTex.end() ? nullptr : it->second.tex;
+        }
+
+        // A texture made, or its pixels replaced (the AI-upscaled ones in
+        // place of the disc's): ImGui's backend uploads them.
+        void SetIconPixels(uint32_t key, uint32_t size, const std::vector<uint8_t>& rgba)
+        {
+            IconTex& t = iconTex[key];
+            bool fresh = !t.tex;
+            if (fresh)
+            {
+                t.size = size;
+                t.tex = new ImTextureData();
+                t.tex->Create(ImTextureFormat_RGBA32, int(size), int(size));
+                t.tex->UseColors = true;
+            }
+            memcpy(t.tex->GetPixels(), rgba.data(), std::min(rgba.size(), size_t(t.size) * t.size * 4));
+            if (fresh)
+                ImGui::RegisterUserTexture(t.tex);
+            else if (t.tex->Status == ImTextureStatus_OK)
+            {
+                ImTextureRect all{ 0, 0, (unsigned short)t.size, (unsigned short)t.size };
+                t.tex->UpdateRect = all;
+                t.tex->Updates.push_back(all);
+                t.tex->SetStatus(ImTextureStatus_WantUpdates);
+            }
+        }
+
+        // From the AI folder where an icon is there, else the disc's.
+        void LoadIconTextures()
+        {
+            fs::path raw = IconDir() / "raw", ai = IconDir() / "ai";
+            for (uint32_t id : kIconIds)
+            {
+                fs::path file = fs::exists(icons::File(ai, id)) ? icons::File(ai, id) : icons::File(raw, id);
+                std::vector<uint8_t> px;
+                std::string error;
+                if (!icons::LoadSquare(file, 64, px, error))
+                    continue;
+                SetIconPixels(id, 64, px);
+                if (id == icons::kTitle && icons::LoadSquare(file, 256, px, error))
+                    SetIconPixels(id | kBig, 256, px);
+            }
+        }
+
+        // The title bar's icon: the game's, or the AppImage's until it's in.
+        void ApplyWindowIcon()
+        {
+            std::vector<std::string> pngs;
+            for (int size : { 256, 64, 32 })
+                if (fs::path p = icons::AppIcon(IconDir(), size); fs::exists(p))
+                    pngs.push_back(p.string());
+            if (pngs.empty() && !bundledIcon.empty())
+                pngs.push_back(bundledIcon.string());
+            if (!pngs.empty())
+                gfx::SetWindowIcon(pngs);
+        }
+
+        bool MenuEntryWanted() const { return state.Get("menu_entry", "true") == "true" && !appImagePath.empty(); }
+        void UpdateMenuEntry(bool iconsChanged)
+        {
+            if (!MenuEntryWanted() || !fs::exists(icons::AppIcon(IconDir(), 256)))
+                return;
+            if (!iconsChanged && icons::MenuEntryTarget() == appImagePath)
+                return;
+            std::string error;
+            if (icons::InstallMenuEntry(appImagePath, IconDir(), error))
+                Log("Applications menu: NFSC Linux, with the game's icon");
+            else
+                Log("applications menu: " + error);
+        }
+
+        // The app icons from the best title icon there is, then everywhere they show.
+        void FinishIcons(bool remake)
+        {
+            fs::path ai = icons::File(IconDir() / "ai", icons::kTitle), raw = icons::File(IconDir() / "raw", icons::kTitle);
+            std::string error;
+            bool made = false;
+            if (remake || !fs::exists(icons::AppIcon(IconDir(), 256)))
+            {
+                if (!icons::MakeAppIcons(fs::exists(ai) ? ai : raw, IconDir(), error))
+                    Log("icons: " + error);
+                else
+                    made = true;
+            }
+            iconsReady = true;
+            ApplyWindowIcon();
+            UpdateMenuEntry(made);
+        }
+
+        // Each frame: once the game is installed, its icons (a few seconds,
+        // once per computer's data folder).
+        void TickIcons()
+        {
+            if (iconsUpscaling)
+            {
+                iconProc.Poll();
+                if (iconProc.Running())
+                    return;
+                iconProc.Poll();
+                iconsUpscaling = false;
+                bool upscaled = fs::exists(icons::File(IconDir() / "ai", icons::kTitle));
+                Log(upscaled ? "The game's icons: AI-upscaled 4x" : "The game's icons: the AI upscaler made nothing, the disc's are used");
+                LoadIconTextures();
+                FinishIcons(true);
+                return;
+            }
+            if (iconsTried || !gameDir)
+                return;
+            iconsTried = true;
+            fs::path raw = IconDir() / "raw", ai = IconDir() / "ai";
+            if (!fs::exists(icons::File(raw, icons::kTitle)))
+            {
+                std::string error;
+                if (!icons::Extract(*gameDir / "default.xex", raw, error))
+                {
+                    Log("icons: " + error);
+                    return;
+                }
+                Log("The game's icons: taken from your default.xex");
+            }
+            LoadIconTextures();
+            if (fs::exists(icons::File(ai, icons::kTitle)) || esrganBin.empty())
+            {
+                FinishIcons(false);
+                return;
+            }
+            // Real-ESRGAN, as the texture pack's (the photographic model: sharpest on these).
+            std::error_code ec;
+            fs::create_directories(ai, ec);
+            int gpu = state.Get("gpu").empty() ? (hw.best >= 0 ? int(hw.gpus[hw.best].index) : 0) : std::atoi(state.Get("gpu").c_str());
+            if (iconProc.Start(Wrap({ esrganBin.string(), "-i", raw.string(), "-o", ai.string(), "-n", "realesrgan-x4plus", "-s", "4",
+                    "-f", "png", "-m", esrganModels.string(), "-g", std::to_string(gpu) })))
+                iconsUpscaling = true;
+            else
+                FinishIcons(false);
+        }
+
         // ---- play ----
         std::vector<std::string> GameEnv()
         {
@@ -722,6 +880,9 @@ namespace
                 env.push_back("NFSMW_GPU=" + gpu);
             // Every car, part, race and DLC unlocked (runtime/game/carbon/unlock_all.cpp).
             env.push_back(std::string("NFSMW_UNLOCK_ALL=") + (UnlockAll() ? "1" : "0"));
+            // The game window's title bar icon: the game's own (TickIcons).
+            if (fs::path icon = icons::AppIcon(IconDir(), 256); fs::exists(icon))
+                env.push_back("NFSC_WINDOW_ICON=" + icon.string());
             return env;
         }
 
@@ -1030,6 +1191,11 @@ namespace
                 return;
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f, 0.22f, 0.12f, 1));
             ImGui::BeginChild("##update", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 1.6f), ImGuiChildFlags_Borders);
+            if (ImTextureData* t = Icon(icons::kUpdate))
+            {
+                ImGui::Image(t->GetTexRef(), ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight()));
+                ImGui::SameLine();
+            }
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted(updateMessage.c_str());
             ImGui::SameLine();
@@ -1121,17 +1287,39 @@ namespace
         ImGui::Begin("##main", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus);
         float side = ImGui::GetFontSize() * 11;
         ImGui::BeginChild("##nav", ImVec2(side, 0), ImGuiChildFlags_Borders);
+        const float fs = ImGui::GetFontSize();
+        if (ImTextureData* t = Icon(icons::kTitle))
+        {
+            ImGui::Image(t->GetTexRef(), ImVec2(fs * 2.4f, fs * 2.4f));
+            ImGui::SameLine();
+        }
+        ImGui::BeginGroup();
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.55f, 0.15f, 1));
         ImGui::TextUnformatted("NFSC LINUX");
         ImGui::PopStyleColor();
         ImGui::TextDisabled("v" NFSC_VERSION);
+        ImGui::EndGroup();
         ImGui::Separator();
-        struct Nav { Page page; const char* label; };
-        const Nav nav[] = { { Page::Play, "Play" }, { Page::Graphics, "Graphics" }, { Page::Ai, "AI Textures" }, { Page::Controls, "Controls" },
-            { Page::Saves, "Saves" }, { Page::Mods, "Mods" }, { Page::Dlc, "DLC" }, { Page::System, "System" } };
+        struct Nav { Page page; const char* label; uint32_t icon; };
+        const Nav nav[] = { { Page::Play, "Play", icons::kPlay }, { Page::Graphics, "Graphics", icons::kGraphics },
+            { Page::Ai, "AI Textures", icons::kAi }, { Page::Controls, "Controls", icons::kControls }, { Page::Saves, "Saves", icons::kSaves },
+            { Page::Mods, "Mods", icons::kMods }, { Page::Dlc, "DLC", icons::kDlc }, { Page::System, "System", icons::kSystem } };
         for (const Nav& n : nav)
         {
-            if (ImGui::Selectable(n.label, page == n.page, 0, ImVec2(0, ImGui::GetFontSize() * 1.8f)))
+            // The row: the game's icon for the page (when it's in), then its name.
+            float rowH = fs * 1.9f, pad = (rowH - fs) * 0.5f;
+            ImVec2 at = ImGui::GetCursorScreenPos();
+            bool clicked = ImGui::Selectable(std::format("##nav{}", int(n.page)).c_str(), page == n.page, 0, ImVec2(0, rowH));
+            ImDrawList* dl = ImGui::GetWindowDrawList();
+            float textX = at.x + fs * 0.4f;
+            if (ImTextureData* t = Icon(n.icon))
+            {
+                float s = rowH - fs * 0.25f, y = at.y + (rowH - s) * 0.5f;
+                dl->AddImageRounded(t->GetTexRef(), ImVec2(at.x, y), ImVec2(at.x + s, y + s), ImVec2(0, 0), ImVec2(1, 1), IM_COL32_WHITE, fs * 0.2f);
+                textX = at.x + s + fs * 0.5f;
+            }
+            dl->AddText(ImVec2(textX, at.y + pad), ImGui::GetColorU32(ImGuiCol_Text), n.label);
+            if (clicked)
             {
                 capturing = nullptr;
                 page = n.page;
@@ -1192,7 +1380,23 @@ namespace
 
     void App::UiPlay()
     {
-        ImGui::SeparatorText("Need for Speed: Carbon (Xbox 360), native");
+        if (ImTextureData* t = Icon(icons::kTitle | kBig))
+        {
+            // The game's own icon, from your disc (AI-upscaled 4x when the upscaler ran).
+            const float fs = ImGui::GetFontSize();
+            ImGui::Image(t->GetTexRef(), ImVec2(fs * 7, fs * 7));
+            ImGui::SameLine();
+            ImGui::BeginGroup();
+            ImGui::Dummy(ImVec2(0, fs * 1.6f));
+            ImGui::PushFont(nullptr, ImGui::GetStyle().FontSizeBase * 1.7f);
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.55f, 0.15f, 1));
+            ImGui::TextUnformatted("Need for Speed: Carbon");
+            ImGui::PopStyleColor();
+            ImGui::PopFont();
+            ImGui::TextDisabled("Xbox 360 Collector's Edition, built natively for this PC");
+            ImGui::EndGroup();
+        }
+        ImGui::SeparatorText("On this PC");
         if (!whereChecked)
             CheckWhere();
         bool built = GameBuilt();
@@ -1761,6 +1965,29 @@ namespace
             if (ImGui::RadioButton(label.c_str(), current == std::to_string(g.index)))
                 state.Set("gpu", std::to_string(g.index));
         }
+        ImGui::SeparatorText("Desktop");
+        {
+            bool on = state.Get("menu_entry", "true") == "true";
+            ImGui::BeginDisabled(appImagePath.empty());
+            if (ImGui::Checkbox("Show NFSC Linux in the applications menu, with the game's icon", &on))
+            {
+                state.Set("menu_entry", on ? "true" : "false");
+                std::string error;
+                if (on)
+                    UpdateMenuEntry(true);
+                else if (icons::RemoveMenuEntry(error))
+                    Log("Applications menu: entry removed");
+                else
+                    notice = "Applications menu: " + error;
+            }
+            ImGui::EndDisabled();
+            Help("A menu entry (~/.local/share/applications/nfsc-linux.desktop) that starts this AppImage, with the icon from your "
+                 "disc, AI-upscaled. The launcher's and the game's windows carry the same icon in their title bars.");
+            if (appImagePath.empty())
+                ImGui::TextDisabled("(only when the launcher runs from its AppImage)");
+            else if (on && !iconsReady)
+                ImGui::TextDisabled("(added once the game is installed: its icon comes from your disc)");
+        }
         ImGui::SeparatorText("Folders");
         ImGui::Text("Data: %s", dataDir.string().c_str());
         ImGui::SameLine();
@@ -1812,6 +2039,7 @@ int main(int argc, char** argv)
         return 1;
     }
     app.PickGameBinary();
+    app.ApplyWindowIcon();
     ImGuiIO& io = ImGui::GetIO();
     float scale = SDL_GetWindowDisplayScale(gfx::Window());
     if (!app.fontPath.empty())
@@ -1874,6 +2102,7 @@ int main(int argc, char** argv)
         app.PollJob();
         app.PollGame();
         app.PollUpdate();
+        app.TickIcons();
         if (app.restartRequested)
             quit = true;
         if (headlessUpdate && app.upd != App::Upd::Checking && !app.job.active)

@@ -36,7 +36,16 @@ AppImage (a newer engine) rebuilds it automatically the next time you press PLAY
 | Saves | Back up, restore, import, export, delete; a save editor (find a 32-bit value such as cash, narrow it down, set it) |
 | Mods | Add (folder or archive), enable/disable, order, remove |
 | DLC | Add your own Xbox 360 Marketplace packages (CON/LIVE files) or folders; remove |
-| System | **Updates** (version, check now, check at startup), hardware report, which GPU the game uses, **Rebuild the game for this PC**, data/log folders |
+| System | **Updates** (version, check now, check at startup), hardware report, which GPU the game uses, the **applications menu entry**, **Rebuild the game for this PC**, data/log folders |
+
+Once the game is installed, the launcher takes its icons from your `default.xex`: the title icon
+and the achievement icons (64x64 each, in the XDBF resource the Xbox dashboard shows). It upscales
+them 4x with Real-ESRGAN (`realesrgan-x4plus`, a few seconds) into
+`~/.local/share/speedbreaker-carbon/icons/`. They mark the launcher's pages. The title icon is also
+the launcher's and the game's title bar and taskbar icon, and the icon of an applications menu
+entry (`~/.local/share/applications/nfsc-linux.desktop`, which starts this AppImage; System >
+Desktop removes it). The AppImage carries none of the game's art, only its own icon, which shows
+until the game is installed.
 
 Command line: `--setup <iso>` (the whole first run), `--play` (straight into the game),
 `--build-ai` (build the AI textures, then exit), `--game <args>` (this PC's game program itself:

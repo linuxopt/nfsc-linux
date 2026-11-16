@@ -10,10 +10,13 @@ target_include_directories(sb-texpack SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/tools/X
 target_link_libraries(sb-texpack PRIVATE ZLIB::ZLIB Threads::Threads)
 
 add_executable(sb-launcher launcher/main.cpp launcher/gfx.cpp launcher/hardware.cpp launcher/process.cpp
-    launcher/settings_file.cpp launcher/content.cpp launcher/xiso.cpp launcher/updater.cpp ${CMAKE_SOURCE_DIR}/runtime/install/sha256.cpp)
+    launcher/settings_file.cpp launcher/content.cpp launcher/xiso.cpp launcher/updater.cpp launcher/icons.cpp
+    texpack/image_io.cpp ${CMAKE_SOURCE_DIR}/runtime/install/sha256.cpp
+    # The game's icons from default.xex (launcher/icons.h): XenonUtils' XDBF reader.
+    ${CMAKE_SOURCE_DIR}/tools/XenonRecomp/XenonUtils/xdbf_wrapper.cpp)
 # Its version and where its updates come from (the top-level CMakeLists.txt).
 target_compile_definitions(sb-launcher PRIVATE NFSC_VERSION="${SB_VERSION_CARBON}" NFSC_GITHUB_REPO="${NFSC_GITHUB_REPO}")
 target_compile_features(sb-launcher PRIVATE cxx_std_20)
 # user/key_names.h: the game's own key names for settings.toml.
 target_include_directories(sb-launcher PRIVATE ${CMAKE_SOURCE_DIR}/runtime)
-target_link_libraries(sb-launcher PRIVATE imgui Threads::Threads)
+target_link_libraries(sb-launcher PRIVATE imgui XenonUtilsLite ZLIB::ZLIB Threads::Threads)
