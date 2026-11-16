@@ -106,6 +106,8 @@ namespace report
             // an "illegal instruction" crash from an older CPU.
 #if defined(__aarch64__)
             const char* arch = "arm64";
+#elif defined(__x86_64__) && defined(__AVX512F__) && defined(__AVX512BW__) && defined(__AVX512VL__)
+            const char* arch = "x86-64-v4";
 #elif defined(__x86_64__) && defined(__AVX2__)
             const char* arch = "x86-64-v3";
 #elif defined(__x86_64__)

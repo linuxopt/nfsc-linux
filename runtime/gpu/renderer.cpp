@@ -21,6 +21,7 @@
 #include "shared_memory_glsl.h"
 #include "shadow_lend.h"
 #include "split_views.h"
+#include "texture_replace.h"
 #include "xenos/registers.h"
 
 #include <kernel/vmem.h>
@@ -4184,6 +4185,18 @@ void main()
             // frame it was last checked in.
             std::vector<uint64_t> verifyHashes;
             uint64_t verifyFrame = 0;
+            // A texture pack's replacement (gpu/texture_replace.h), sampled
+            // instead of `image` while `replaced`: its own image, format,
+            // levels and views. One no longer matching the guest bytes is
+            // retired, not destroyed (the GPU may still read it), until the
+            // texture goes.
+            bool replaced = false;
+            uint64_t replaceKey = 0;
+            Image replacement;
+            VkFormat replacementFormat = VK_FORMAT_UNDEFINED;
+            uint32_t replacementLevels = 0;
+            std::unordered_map<uint32_t, VkImageView> replacementViews;
+            std::vector<std::pair<Image, std::unordered_map<uint32_t, VkImageView>>> retired;
         };
         void LoadScaledTexture(Texture& t, uint32_t base, uint32_t pitchBlocks, uint32_t endian);
         // Deferred shadow resolves (see ShadowLend): before `t`'s own image is
@@ -4549,7 +4562,7 @@ void main()
         {
             if (t.lend)
                 return LendView(*t.lend, swizzle);
-            auto& view = t.views[swizzle];
+            auto& view = t.replaced ? t.replacementViews[swizzle] : t.views[swizzle];
             if (view)
                 return view;
             auto comp = [](uint32_t s) {
@@ -4567,10 +4580,10 @@ void main()
             // Sampled only (a storable scaled texture's format need not support storage).
             VkImageViewUsageCreateInfo usage{ VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO, nullptr, VK_IMAGE_USAGE_SAMPLED_BIT };
             VkImageViewCreateInfo vci{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-            vci.pNext = t.storeView ? &usage : nullptr;
-            vci.image = t.image.image;
+            vci.pNext = t.storeView && !t.replaced ? &usage : nullptr;
+            vci.image = t.replaced ? t.replacement.image : t.image.image;
             vci.viewType = t.cube ? VK_IMAGE_VIEW_TYPE_CUBE : t.volume ? VK_IMAGE_VIEW_TYPE_3D : VK_IMAGE_VIEW_TYPE_2D;
-            vci.format = t.format;
+            vci.format = t.replaced ? t.replacementFormat : t.format;
             vci.components = { comp(swizzle), comp(swizzle >> 3), comp(swizzle >> 6), comp(swizzle >> 9) };
             vci.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_REMAINING_MIP_LEVELS, 0, t.cube ? 6u : 1u };
             Check(vkCreateImageView(s_dev, &vci, nullptr, &view), "vkCreateImageView(texture)");
@@ -4581,6 +4594,97 @@ void main()
         // cube, or the placeholder. Base level only; each cube face is a
         // tiled 2D slice, 4 KB-aligned (Xenia's GetGuestTextureLayout).
         enum class TexDim { k2D, k3D, kCube };
+
+        // Texture packs (gpu/texture_replace.h): the replacement `t` samples
+        // stops being current (its own image waits for the texture to go).
+        void RetireReplacement(Texture& t)
+        {
+            if (t.replacement.image)
+                t.retired.emplace_back(std::move(t.replacement), std::move(t.replacementViews));
+            t.replacement = {};
+            t.replacementViews.clear();
+            t.replaced = false;
+            t.replaceKey = 0;
+        }
+
+        // At a load of `t` (2D, block-compressed): whether a pack replaces
+        // the base level's guest bytes now there. True: `t` samples the
+        // replacement (uploaded here); false: load the guest texture.
+        bool ReplaceTexture(Texture& t, uint32_t format, uint32_t base, uint32_t size, uint32_t width, uint32_t height)
+        {
+            const bool logKeys = texreplace::LoggingKeys();
+            if (!logKeys && !texreplace::Active())
+                return false;
+            if (!writewatch::CpuReadable(base, size))
+            {
+                if (t.replaced)
+                    RetireReplacement(t);
+                return false;
+            }
+            uint64_t key = texreplace::Key(s_sharedHost + base, size, format, width, height);
+            if (logKeys)
+                texreplace::LogKey(key, format, width, height, size);
+            if (t.replaced && key == t.replaceKey)
+                return true;  // the same bytes again
+            if (t.replaced)
+                RetireReplacement(t);
+            if (!texreplace::Has(key))
+                return false;
+            texreplace::Image img;
+            if (!texreplace::Load(key, img))
+                return false;
+            VkFormat vkFormat = VkFormat(img.vkFormat);
+            VkFormatProperties props;
+            vkGetPhysicalDeviceFormatProperties(s_vk->physical, vkFormat, &props);
+            if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))
+            {
+                LogOnce(0x7E00 + uint32_t(vkFormat), "texture pack: this GPU can't sample VkFormat %d: those textures stay the game's own", int(vkFormat));
+                return false;
+            }
+            uint32_t levels = uint32_t(img.levels.size());
+            for (const auto& level : img.levels)
+                if (level.data.size() > kSlotSize)
+                {
+                    LogOnce(0x7E80, "texture pack: a %ux%u texture is over the %llu MB staging limit: the game's own",
+                        img.width, img.height, (unsigned long long)(kSlotSize >> 20));
+                    return false;
+                }
+            Image ni = CreateImage(VK_IMAGE_TYPE_2D, vkFormat, { img.width, img.height, 1 }, 1,
+                VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_COLOR_BIT,
+                0, levels, nullptr, nullptr, true);
+            if (!ni.image)
+                return false;
+            for (uint32_t level = 0; level < levels; level++)
+            {
+                const auto& l = img.levels[level];
+                VkDeviceSize staging = RingAllocate(l.data.size());
+                if (staging == ~VkDeviceSize(0))
+                {
+                    t.retired.emplace_back(std::move(ni), std::unordered_map<uint32_t, VkImageView>{});
+                    return false;
+                }
+                memcpy(s_ringHost + staging, l.data.data(), l.data.size());
+                EndPass();
+                Begin();
+                if (level == 0)
+                    ToGeneral(ni.image, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+                VkBufferImageCopy region{};
+                region.bufferOffset = staging;
+                region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, level, 0, 1 };
+                region.imageExtent = { l.width, l.height, 1 };
+                vkCmdCopyBufferToImage(s_cmd, s_ring, ni.image, VK_IMAGE_LAYOUT_GENERAL, 1, &region);
+                FullBarrier();
+            }
+            SubmitIfStarving();
+            t.replacement = std::move(ni);
+            t.replacementFormat = vkFormat;
+            t.replacementLevels = levels;
+            t.replaceKey = key;
+            t.replaced = true;
+            LogOnce(0x7F00, "texture pack: replacing textures (first: %ux%u format %u -> %ux%u, %u levels)",
+                width, height, format, img.width, img.height, levels);
+            return true;
+        }
 
         // What a lookup's result depends on beyond the fetch constant (for
         // the lookup cache below). `texture`: null when it isn't kept (a
@@ -4909,6 +5013,20 @@ void main()
                     EnsureShadow(base, size);
                     if (mipSize)
                         EnsureShadow(mipBase, mipSize);
+                    // A texture pack's replacement (gpu/texture_replace.h).
+                    if (fi.block == 4 && !cube && !volume && layers == 1 && !t.scaled && !t.storeView && !f.stacked &&
+                        width >= 16 && height >= 16 && ReplaceTexture(t, format, base, size, width, height))
+                    {
+                        t.uploaded = true;
+                        writewatch::Watch(base, size);
+                        if (mipSize)
+                            writewatch::Watch(mipBase, mipSize);
+                        s_stats.uploads++;
+                        sampler = GetSampler(f, t.replacementLevels - 1);
+                        if (out)
+                            out->texture = &t;
+                        return TextureView(t, f.swizzle);
+                    }
                     uint32_t outBpbLog2 = fi.convert == 0 ? fi.bpbLog2 : 2;
                     uint32_t rowWords, rowTexels;
                     if (fi.convert != 0 || fi.bpbLog2 >= 2)
@@ -5061,6 +5179,8 @@ void main()
             }
             if (out && !t.scaled)
                 out->texture = &t;
+            if (t.replaced)
+                sampler = GetSampler(f, t.replacementLevels - 1);
             return TextureView(t, f.swizzle);
         }
 
@@ -8983,6 +9103,14 @@ void main()
                 vkDestroyImageView(s_dev, t.storeView, nullptr);
             t.storeView = VK_NULL_HANDLE;
             DestroyImage(t.image);
+            RetireReplacement(t);
+            for (auto& [image, views] : t.retired)
+            {
+                for (auto& [swizzle, view] : views)
+                    vkDestroyImageView(s_dev, view, nullptr);
+                DestroyImage(image);
+            }
+            t.retired.clear();
         }
 
         // Drops the cached textures `which` picks (the GPU idle); returns how many.

@@ -316,7 +316,16 @@ static std::filesystem::path ContentRoot(const XCONTENT_DATA& data)
         return GetSavePath(true) / name;
     }
     if (data.dwContentType == XCONTENTTYPE_DLC)
-        return GetGamePath() / "dlc";
+    {
+        // Downloadable content: one folder each in the user data's dlc/
+        // (the launcher unpacks the player's own Xbox 360 packages there,
+        // with a <name>.xcontent beside each, as saves have).
+        std::string name(data.szFileName, strnlen(data.szFileName, sizeof(data.szFileName)));
+        for (char& c : name)
+            if (c == '/' || c == '\\' || c == ':' || (c == '.' && &c == &name[0]))
+                c = '_';
+        return GetUserPath() / "dlc" / name;
+    }
     return GetGamePath();
 }
 
@@ -340,6 +349,21 @@ static void ScanSavedContent()
             continue;
         XamRegisterContent(data, (const char*)root.u8string().c_str());
         fprintf(stderr, "[xam] found save \"%.*s\"\n", int(strnlen(data.szFileName, sizeof(data.szFileName))), data.szFileName);
+    }
+    // Downloadable content the launcher installed (see ContentRoot).
+    for (const auto& entry : std::filesystem::directory_iterator(GetUserPath() / "dlc", ec))
+    {
+        if (entry.path().extension() != ".xcontent")
+            continue;
+        XCONTENT_DATA data{};
+        std::ifstream f(entry.path(), std::ios::binary);
+        if (!f.read(reinterpret_cast<char*>(&data), sizeof(data)) || data.dwContentType != XCONTENTTYPE_DLC)
+            continue;
+        std::filesystem::path root = ContentRoot(data);
+        if (!std::filesystem::is_directory(root, ec))
+            continue;
+        XamRegisterContent(data, (const char*)root.u8string().c_str());
+        fprintf(stderr, "[xam] found downloadable content \"%.*s\"\n", int(strnlen(data.szFileName, sizeof(data.szFileName))), data.szFileName);
     }
 }
 
