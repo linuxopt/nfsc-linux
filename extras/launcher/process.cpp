@@ -88,7 +88,15 @@ namespace launcher
         for (;;)
         {
             ssize_t n = read(m_fd, buf, sizeof(buf));
-            if (n <= 0)
+            if (n == 0)
+            {
+                // End of output: a last line without its newline is a line too.
+                if (!m_partial.empty())
+                    lines.push_back(std::move(m_partial));
+                m_partial.clear();
+                break;
+            }
+            if (n < 0)
                 break;
             for (ssize_t i = 0; i < n; i++)
             {

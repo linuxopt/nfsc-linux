@@ -164,6 +164,7 @@ namespace
         std::string updateMessage;
         bool updateDismissed = false, showNotes = false, restartRequested = false;
         std::string appImagePath = Env("APPIMAGE");  // set by the AppImage runtime
+        bool headless = false;  // --update, --setup, --build-ai: no browser, the terminal says it
         bool gameRunning = false;
         Page page = Page::Play;
         std::string notice;
@@ -185,6 +186,7 @@ namespace
 
         void Log(const std::string& s)
         {
+            fprintf(stderr, "[launcher] %s\n", s.c_str());  // the terminal too (--setup, --update)
             console.push_back(s);
             if (console.size() > 400)
                 console.erase(console.begin(), console.begin() + 100);
@@ -894,7 +896,8 @@ namespace
             {
                 upd = Upd::Failed;
                 updateMessage = "Couldn't reach GitHub to check for updates (offline?).";
-                Log("update: " + updateMessage);
+                Log(std::format("update: {} (curl exit {}{}{})", updateMessage, updateProc.ExitCode(),
+                    updateLines.empty() ? "" : ": ", updateLines.empty() ? "" : updateLines.back()));
                 return;
             }
             if (status == 404)
@@ -930,14 +933,21 @@ namespace
             const update::Asset* asset = latest.Find(update::kAssetSuffix);
             if (!asset || appImagePath.empty())
             {
-                OpenUrl(latest.url.empty() ? update::kReleasesPage : latest.url);
+                std::string page = latest.url.empty() ? update::kReleasesPage : latest.url;
+                if (headless)
+                    updateMessage += " Not running as the AppImage: download it from " + page;
+                else
+                    OpenUrl(page);
                 return;
             }
             fs::path target = appImagePath;
             if (access(target.parent_path().c_str(), W_OK) != 0)
             {
-                notice = "Can't update in place: " + target.parent_path().string() + " isn't writable. The download page is open.";
-                OpenUrl(latest.url);
+                notice = "Can't update in place: " + target.parent_path().string() + " isn't writable." +
+                    (headless ? " Download it from " + latest.url : " The download page is open.");
+                updateMessage = notice;
+                if (!headless)
+                    OpenUrl(latest.url);
                 return;
             }
             std::string curl = update::FindCurl();
@@ -1782,6 +1792,7 @@ int main(int argc, char** argv)
     // --update: check for a newer release, install it if there is one, then exit.
     bool headlessUpdate = std::find(args.begin(), args.end(), "--update") != args.end();
     bool updateStarted = false;
+    app.headless = headlessUpdate || headlessAi || std::find(args.begin(), args.end(), "--setup") != args.end();
     // --setup <disc image>: the whole first run without the clicks (build, install, AI textures).
     std::string setupImage;
     if (auto it = std::find(args.begin(), args.end(), "--setup"); it != args.end() && it + 1 != args.end())
