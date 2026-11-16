@@ -1,0 +1,459 @@
+# SpeedBreaker settings, written by the game's settings menu. Hand edits
+# are fine while the game is closed; unknown keys are dropped on the next
+# save. The environment variable after an option overrides it for one run
+# without changing this file.
+
+[video]
+# Fullscreen: Fill the screen with a borderless window. Off: a resizable window.
+# True or false. (NFSMW_FULLSCREEN)
+fullscreen = false
+
+# V-Sync: Show each frame on a display refresh. Off can tear, but frames appear sooner.
+# True or false. (NFSMW_VSYNC)
+vsync = true
+
+# Frame Rate: Auto: 60, or 30 while the device is hot or can't hold 60. A steady 30 feels smoother than a shaky 60 (the Steam Frame's headset). The game keeps its speed.
+# One of "auto", "60", "30". (NFSMW_FRAME_RATE)
+frame_rate = "60"
+
+# Smooth Motion: Up to 120 fps on a 120 Hz screen, or 90 on a 90 Hz one (not on a Steam Deck): the game still runs at 60 steps a second, and a picture between each two is drawn from the poses either side. A little more delay and power. Heavy scenes drop to an even 60 for a while; off at 30 fps and with variable refresh.
+# True or false. (NFSMW_HFR; applies at the next launch)
+smooth_motion = false
+
+# Screen Resolution: 75%: the picture and these menus at 3/4 of the screen's resolution each way, scaled up by iOS: a little softer, a little less GPU work.
+# One of "100", "75". (NFSMW_SCREEN_RESOLUTION)
+present_scale = "100"
+
+# Anti-Aliasing: Smooth jagged edges (the 360 used 2x MSAA; this is an FXAA-style pass).
+# True or false. (NFSMW_AA)
+anti_aliasing = true
+
+# Upscaling: How the game's picture is enlarged to the window. Bicubic is sharp, bilinear softer. FSR 1 (AMD FidelityFX Super Resolution 1) keeps curves, wires and diagonals smooth when the window is much larger than the Internal Resolution (1x on a 1440p or 4K screen), for a little more GPU time.
+# One of "bicubic", "linear", "fsr1". (NFSMW_SCALING)
+scaling = "bicubic"
+
+# Aspect Ratio: Fill other screen shapes: a wider view on an ultrawide, a taller one on a Steam Deck or a 4:3 iPad, the HUD at 16:9. Or 16:9 with bars.
+# One of "auto", "16:9". (NFSMW_ASPECT)
+aspect_ratio = "auto"
+
+# Brightness: Lighter or darker shadows and mid-tones, a gentle step at a time, as a TV's brightness. Black and white stay put. 0 is the original picture.
+# A whole number from -5 to 5. (NFSMW_BRIGHTNESS)
+brightness = 0
+
+# Xbox 360 Display Gamma: The gamma ramp the game itself sets for a real Xbox 360's TV output: a little deeper shadows and brighter mid-tones, as on the console. Off: the flatter picture, without the ramp.
+# True or false. (NFSMW_DISPLAY_GAMMA)
+xbox_display_gamma = true
+
+# Cooler Colors: A cooler picture with less of the game's yellow: blue raised, red and green lowered a little, over the whole game picture (menus and movies too). Off: the game's own colors, as on the Xbox 360.
+# True or false. (NFSMW_COOLER_COLORS)
+cooler_colors = false
+
+# HDR Output: Brighter highlights on an HDR display (extended dynamic range). The game's own picture, including its front end, follows the highlights; this settings overlay stays at standard brightness. Off: the standard-range picture.
+# True or false. (NFSMW_HDR)
+hdr = false
+
+# HDR Format: How HDR is sent. Auto: Extended Linear on a display that reports HDR capability, otherwise standard range. HDR10 (PQ) sends the PQ signal and metadata; the display's HDR mode still follows macOS.
+# One of "auto", "edr", "hdr10". (NFSMW_HDR_FORMAT)
+hdr_format = "auto"
+
+# HDR Strength: How far white and highlights go above SDR white: 2x by default, 3x, or 4x. A frame that is mostly white is dimmed toward SDR automatically, so a boot flash or a full-screen logo does not become a 4x flash.
+# One of "2x", "3x", "4x". (NFSMW_HDR_STRENGTH)
+hdr_strength = "2x"
+
+# HDR Paper White: How bright the game's ordinary white is in HDR10, in nits; highlights go HDR Strength times above it. Auto matches the system: 400 on SteamOS and the Steam Deck, 200 on Windows and Linux, 100 on a Mac. Raise it if HDR looks dimmer than the game in SDR.
+# One of "auto", "100", "200", "300", "400". (NFSMW_HDR_PAPER_WHITE)
+hdr_paper_white = "auto"
+
+# Sharpening: Extra sharpness for bicubic and FSR 1 upscaling (for FSR 1, the share of its sharpening pass's full strength). 0 turns it off.
+# A number from 0 to 1. (NFSMW_SHARPEN)
+sharpening = 0.3
+
+# Anisotropic Filtering: Keeps roads and walls sharp at a distance. Auto: 16x on a dedicated GPU or an M-series iPad, 4x on other integrated ones.
+# One of "auto", "off", "2x", "4x", "8x", "16x", "game", or a number from 1 to 16. (NFSMW_ANISOTROPY)
+anisotropic_filtering = "auto"
+
+# Mipmaps: Use the game's smaller textures in the distance, so they don't shimmer.
+# True or false. (NFSMW_TEXTURE_MIPS)
+mipmaps = true
+
+# Internal Resolution: Render the 3D scene above the 360's 720p. 1.5x is 1080p, a little over half the pixels of 2x. On a screen of another shape filled by Fill Screen, each step renders that shape: 1x on a Steam Deck is its own 1280x800. Auto: from the screen and the GPU (1440p: 1.5x on an integrated GPU such as a Mac's, 2x on a dedicated one; a Steam Deck: its 1280x800).
+# One of "auto", "1x", "1.5x", "2x", "3x". (NFSMW_RESOLUTION)
+internal_resolution = "auto"
+
+# Shadow Resolution: Sharper sun shadows: draw the game's 1600x1600 shadow map at 1.5x or 2x. 1x is as on the Xbox 360. Higher settings use more GPU time and memory.
+# One of "1x", "1.5x", "2x". (NFSMW_SHADOW_RESOLUTION)
+shadow_resolution = "1x"
+
+# Window Width: The window's width when the game starts.
+# A whole number from 320 to 16384. (NFSMW_WINDOW; applies at the next launch)
+window_width = 1280
+
+# Window Height: The window's height when the game starts.
+# A whole number from 200 to 16384. (NFSMW_WINDOW; applies at the next launch)
+window_height = 720
+
+[audio]
+# Master Volume: The volume of all game audio.
+# A whole number from 0 to 100. (NFSMW_VOLUME)
+master_volume = 100
+
+# Mute: Silence all game audio.
+# True or false. (NFSMW_MUTE)
+mute = false
+
+# Mute in Background: Silence the game while its window isn't focused.
+# True or false. (NFSMW_MUTE_UNFOCUSED)
+mute_in_background = false
+
+[input]
+# Stick Deadzone: How far a stick moves before the game sees it. Raise it if the car steers by itself.
+# A number from 0 to 0.9. (NFSMW_DEADZONE)
+stick_deadzone = 0.08
+
+# Trigger Deadzone: How far a trigger is pressed before it counts.
+# A number from 0 to 0.9. (NFSMW_TRIGGER_DEADZONE)
+trigger_deadzone = 0.02
+
+# Vibration: Controller rumble, and the knocks a steering wheel's force feedback passes on (Settings > Wheel).
+# True or false. (NFSMW_VIBRATION)
+vibration = true
+
+[wheel]
+# Steering Wheel: Drive with a connected USB steering wheel. Off: the game ignores it and a controller or the keyboard plays, but it still works these menus.
+# True or false. (NFSMW_WHEEL)
+enabled = true
+
+# Steering Range: How far you turn the wheel, lock to lock, for the car's full lock. 360 suits this game, which was made for a pad: half a turn each way. More is slower to steer; All uses the whole turn. The degrees assume a 900-degree wheel, as the G29 is.
+# One of "180", "270", "360", "450", "540", "720", "900", "all", or a number from 0 to 900. (NFSMW_STEERING_RANGE)
+steering_range = "360"
+
+# Invert Steering: For a wheel whose axis runs the other way: turning left steers left again. Calibrate sets this for you.
+# True or false. (NFSMW_INVERT_STEERING)
+invert_steering = false
+
+# Steering Deadzone: How far the wheel turns before the game sees it. A wheel needs none; raise it only if the car pulls to one side.
+# A number from 0 to 0.3. (NFSMW_STEERING_DEADZONE)
+steering_deadzone = 0.0
+
+# Steering Response: 1.00 steers in step with the wheel, and suits most. Above 1.00 calms the centre for holding a straight, and sharpens the last of the turn. Below 1.00 makes the centre twitchy: at 0.50 the first tenth of the steering is within 2 degrees of straight.
+# A number from 0.5 to 2. (NFSMW_STEERING_RESPONSE)
+steering_response = 1.0
+
+# Force Feedback: How strongly the knocks the game asks for reach the wheel. Needs a wheel whose force feedback this system drives; Vibration (Input) turns it off too.
+# A whole number from 0 to 100. (NFSMW_FORCE_FEEDBACK)
+force_feedback = 100
+
+# Centering Force: How hard the wheel pulls back to straight ahead. A wheel with no spring of its own needs this; it needs force feedback too.
+# A whole number from 0 to 100. (NFSMW_WHEEL_CENTERING)
+centering_force = 50
+
+# Steering Axis: Which of the wheel's axes this is, as the device numbers them. -1: from the device.
+# A whole number from -1 to 31. (NFSMW_WHEEL_STEER_AXIS)
+steer_axis = -1
+
+# Throttle Axis: Which of the wheel's axes this is, as the device numbers them. -1: from the device.
+# A whole number from -1 to 31. (NFSMW_WHEEL_THROTTLE_AXIS)
+throttle_axis = -1
+
+# Brake Axis: Which of the wheel's axes this is, as the device numbers them. -1: from the device.
+# A whole number from -1 to 31. (NFSMW_WHEEL_BRAKE_AXIS)
+brake_axis = -1
+
+# Clutch Axis: Which of the wheel's axes this is, as the device numbers them. -1: from the device.
+# A whole number from -1 to 31. (NFSMW_WHEEL_CLUTCH_AXIS)
+clutch_axis = -1
+
+# Throttle at Rest: What the pedal's axis reads there, as Calibrate measured it.
+# A whole number from -32768 to 32767. (NFSMW_WHEEL_THROTTLE_REST)
+throttle_rest = 0
+
+# Throttle Pressed: What the pedal's axis reads there, as Calibrate measured it.
+# A whole number from -32768 to 32767. (NFSMW_WHEEL_THROTTLE_FULL)
+throttle_full = 0
+
+# Brake at Rest: What the pedal's axis reads there, as Calibrate measured it.
+# A whole number from -32768 to 32767. (NFSMW_WHEEL_BRAKE_REST)
+brake_rest = 0
+
+# Brake Pressed: What the pedal's axis reads there, as Calibrate measured it.
+# A whole number from -32768 to 32767. (NFSMW_WHEEL_BRAKE_FULL)
+brake_full = 0
+
+# Clutch at Rest: What the pedal's axis reads there, as Calibrate measured it.
+# A whole number from -32768 to 32767. (NFSMW_WHEEL_CLUTCH_REST)
+clutch_rest = 0
+
+# Clutch Pressed: What the pedal's axis reads there, as Calibrate measured it.
+# A whole number from -32768 to 32767. (NFSMW_WHEEL_CLUTCH_FULL)
+clutch_full = 0
+
+# Steering Full Left: What the pedal's axis reads there, as Calibrate measured it.
+# A whole number from -32768 to 32767. (NFSMW_WHEEL_STEER_LEFT)
+steer_left = 0
+
+# Steering Full Right: What the pedal's axis reads there, as Calibrate measured it.
+# A whole number from -32768 to 32767. (NFSMW_WHEEL_STEER_RIGHT)
+steer_right = 0
+
+# A Button: Which of the wheel's buttons this control is, as Calibrate recorded it.
+# A whole number from -1 to 255. (NFSMW_WHEEL_BUTTON_A)
+button_a = -1
+
+# B Button: Which of the wheel's buttons this control is, as Calibrate recorded it.
+# A whole number from -1 to 255. (NFSMW_WHEEL_BUTTON_B)
+button_b = -1
+
+# X Button: Which of the wheel's buttons this control is, as Calibrate recorded it.
+# A whole number from -1 to 255. (NFSMW_WHEEL_BUTTON_X)
+button_x = -1
+
+# Y Button: Which of the wheel's buttons this control is, as Calibrate recorded it.
+# A whole number from -1 to 255. (NFSMW_WHEEL_BUTTON_Y)
+button_y = -1
+
+# LB Button: Which of the wheel's buttons this control is, as Calibrate recorded it.
+# A whole number from -1 to 255. (NFSMW_WHEEL_BUTTON_LB)
+button_lb = -1
+
+# RB Button: Which of the wheel's buttons this control is, as Calibrate recorded it.
+# A whole number from -1 to 255. (NFSMW_WHEEL_BUTTON_RB)
+button_rb = -1
+
+# Back Button: Which of the wheel's buttons this control is, as Calibrate recorded it.
+# A whole number from -1 to 255. (NFSMW_WHEEL_BUTTON_BACK)
+button_back = -1
+
+# Start Button: Which of the wheel's buttons this control is, as Calibrate recorded it.
+# A whole number from -1 to 255. (NFSMW_WHEEL_BUTTON_START)
+button_start = -1
+
+# Left Stick Click: Which of the wheel's buttons this control is, as Calibrate recorded it.
+# A whole number from -1 to 255. (NFSMW_WHEEL_BUTTON_LS)
+button_ls = -1
+
+# Right Stick Click: Which of the wheel's buttons this control is, as Calibrate recorded it.
+# A whole number from -1 to 255. (NFSMW_WHEEL_BUTTON_RS)
+button_rs = -1
+
+# Shift Up: Which of the wheel's buttons this control is, as Calibrate recorded it.
+# A whole number from -1 to 255. (NFSMW_WHEEL_BUTTON_SHIFT_UP)
+button_shift_up = -1
+
+# Shift Down: Which of the wheel's buttons this control is, as Calibrate recorded it.
+# A whole number from -1 to 255. (NFSMW_WHEEL_BUTTON_SHIFT_DOWN)
+button_shift_down = -1
+
+# Wheel Settings Version: Which steering these Wheel settings were made with: 0 before the game's own deadzone was stepped over, 1 since.
+# A whole number from 0 to 1. (NFSMW_WHEEL_SETTINGS_VERSION)
+settings_version = 1
+
+[keys]
+# Right Trigger: Gas in the game's default layout.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+right_trigger = "w"
+
+# Right Trigger: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+right_trigger_2 = "none"
+
+# Left Trigger: Brake and reverse in the game's default layout.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+left_trigger = "s"
+
+# Left Trigger: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+left_trigger_2 = "none"
+
+# Left Stick Left: Steer left.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+left_stick_left = "a"
+
+# Left Stick Left: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+left_stick_left_2 = "left"
+
+# Left Stick Right: Steer right.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+left_stick_right = "d"
+
+# Left Stick Right: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+left_stick_right_2 = "right"
+
+# Left Stick Up: The left stick pushed up (menus).
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+left_stick_up = "up"
+
+# Left Stick Up: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+left_stick_up_2 = "none"
+
+# Left Stick Down: The left stick pulled down.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+left_stick_down = "down"
+
+# Left Stick Down: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+left_stick_down_2 = "none"
+
+# A: The A button.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+a = "space"
+
+# A: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+a_2 = "none"
+
+# B: The B button.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+b = "backspace"
+
+# B: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+b_2 = "none"
+
+# X: The X button.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+x = "left_shift"
+
+# X: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+x_2 = "none"
+
+# Y: The Y button.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+y = "left_ctrl"
+
+# Y: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+y_2 = "none"
+
+# LB: The left shoulder button.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+lb = "q"
+
+# LB: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+lb_2 = "none"
+
+# RB: The right shoulder button.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+rb = "e"
+
+# RB: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+rb_2 = "none"
+
+# D-pad Up: The D-pad, up.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+dpad_up = "up"
+
+# D-pad Up: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+dpad_up_2 = "none"
+
+# D-pad Down: The D-pad, down.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+dpad_down = "down"
+
+# D-pad Down: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+dpad_down_2 = "none"
+
+# D-pad Left: The D-pad, left.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+dpad_left = "left"
+
+# D-pad Left: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+dpad_left_2 = "none"
+
+# D-pad Right: The D-pad, right.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+dpad_right = "right"
+
+# D-pad Right: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+dpad_right_2 = "none"
+
+# Start: Start: pause.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+start = "return"
+
+# Start: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+start_2 = "none"
+
+# Back: Back.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+back = "escape"
+
+# Back: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+back_2 = "none"
+
+# Right Stick Up: The right stick pushed up.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+right_stick_up = "o"
+
+# Right Stick Up: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+right_stick_up_2 = "none"
+
+# Right Stick Down: The right stick pulled down.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+right_stick_down = "l"
+
+# Right Stick Down: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+right_stick_down_2 = "none"
+
+# Right Stick Left: The right stick pushed left.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+right_stick_left = "k"
+
+# Right Stick Left: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+right_stick_left_2 = "none"
+
+# Right Stick Right: The right stick pushed right.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+right_stick_right = "semicolon"
+
+# Right Stick Right: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+right_stick_right_2 = "none"
+
+# Left Stick Click: Pressing the left stick in.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+left_stick_click = "z"
+
+# Left Stick Click: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+left_stick_click_2 = "none"
+
+# Right Stick Click: Pressing the right stick in.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+right_stick_click = "c"
+
+# Right Stick Click: A second key for the same control, or none.
+# A key name such as "w", "left_shift" or "keypad_1", or "none" (user/key_names.h lists them).
+right_stick_click_2 = "none"
+
+[advanced]
+# Asynchronous Shaders: Skip an object for a frame or two while its shader compiles, instead of stuttering.
+# True or false. (NFSMW_ASYNC_PIPELINES)
+async_shaders = true
+
+# Performance Overlay: Show the frame rate and frame time in a corner of the screen.
+# True or false. (NFSMW_PERF_OVERLAY)
+performance_overlay = false
+
+[game]
+# Language: The language of the game's menus and race text: English (the USA disc's), or French, German, Italian, Spanish, Dutch, Swedish, Danish, Polish or Finnish, from the same disc's files. The movies and the speech stay in English, as the disc has them. The European (PAL) Spanish disc has Spanish movies and speech, and starts in Spanish; another language there keeps them in Spanish.
+# One of "english", "french", "german", "italian", "spanish", "dutch", "swedish", "danish", "polish", "finnish". (NFSMW_LANGUAGE; applies at the next launch)
+language = "english"
+
+[app]
+# The SpeedBreaker version that ran last (the game keeps this up to date).
+last_version = "0.1.3"

@@ -76,3 +76,20 @@ for at least three years after a release, its copy is provided at no charge.
 
 The hedge-dev team, for XenonRecomp and the approach of Unleashed Recompiled that SpeedBreaker
 follows, and the Xenia project, for years of Xbox 360 research.
+
+## AppImage extras (extras/, scripts/appimage/)
+
+- **Real-ESRGAN** (Xintao Wang): the AI upscaling models bundled in the AppImage. BSD-3-Clause
+  (`scripts/appimage/licenses/Real-ESRGAN-LICENSE.txt`).
+- **Real-ESRGAN ncnn-vulkan** (xinntao, release v0.2.5.0, `realesrgan-ncnn-vulkan-20220424-ubuntu.zip`):
+  the upscaler program, bundled unchanged. MIT (`scripts/appimage/licenses/realesrgan-ncnn-vulkan-MIT.txt`).
+  It is built on **ncnn** (Tencent). BSD-3-Clause (`scripts/appimage/licenses/ncnn-LICENSE.txt`).
+- **ea-compress HUFF and JDLZ decoders** (47PADO47/nfs-mw, `libs/ea-compress`, Copyright (c) 2026 the nfs-mw
+  contributors): `extras/texpack/ea_compress.cpp` is a C++ port of its Rust decoders. Dual MIT OR Apache-2.0,
+  used here under MIT (`scripts/appimage/licenses/ea-compress-MIT.txt`, with its `ea-compress-NOTICE.txt`).
+- **xxHash** (Yann Collet, via XenonRecomp's thirdparty/): the texture keys. BSD-2-Clause.
+- **The AppImage's toolchain and libraries** (clang, lld and LLVM; glibc; the GCC runtime; ICU, libxml2, libffi,
+  libedit, ncurses, zstd, zlib-ng; SDL3, glslang, SPIRV-Tools, the Vulkan loader; oneTBB's headers): copied
+  unchanged from Arch Linux packages by `scripts/appimage/make_sdk.sh` and `make_appimage.sh`.
+  `scripts/appimage/collect_licenses.sh` lists each package, version, license and source in the AppImage's
+  `usr/share/speedbreaker-carbon/licenses/README-packages.txt`, with the license texts.

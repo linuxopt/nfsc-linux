@@ -1,0 +1,89 @@
+#!/bin/bash
+# SpeedBreaker: Carbon AppImage: starts the launcher (usr/bin/sb-launcher),
+# which builds the game on this PC from the player's disc image (with the SDK
+# in usr/lib/sdk, for this PC's CPU), installs it, builds the AI texture pack
+# and starts the game.
+#
+#   SpeedBreaker-Carbon.AppImage              the launcher window
+#   SpeedBreaker-Carbon.AppImage --play       straight into the game
+#   SpeedBreaker-Carbon.AppImage --build-ai   build the AI texture pack, no window
+#   SpeedBreaker-Carbon.AppImage --game ARGS  the game program itself (--install, --where, ...)
+#
+# Libraries (as scripts/steamos/bundle/speedbreaker.sh): usr/lib always;
+# usr/lib/cxx (libstdc++, libgcc_s) and usr/lib/glibc (the C library and its
+# loader) only when the system's are older than the ones built against. The
+# Vulkan loader, GPU drivers, X11/Wayland and audio always come from the
+# system. Everything starts through the chosen loader with --library-path,
+# never LD_LIBRARY_PATH, so programs started from the launcher (a file
+# dialog, the file manager) never see these libraries.
+HERE="$(dirname "$(readlink -f "$0")")"
+export SB_APPDIR="$HERE"
+say() { echo "[appimage] $*" >&2; }
+
+flags=" $(grep -m1 '^flags' /proc/cpuinfo | cut -d: -f2-) "
+for f in avx2 fma bmi2 movbe; do
+    case "$flags" in *" $f "*) ;; *) say "this CPU lacks $f: the game needs an x86-64-v3 CPU (Intel Haswell / AMD Zen or later); the launcher will say so" ;; esac
+done
+
+LOADER_NAME=ld-linux-x86-64.so.2
+HOST_LOADER=/lib64/ld-linux-x86-64.so.2
+BUNDLED_LOADER="$HERE/usr/lib/glibc/$LOADER_NAME"
+loader_version() { "$1" --version 2>/dev/null | sed -n '1s/.* version \([0-9][0-9.]*[0-9]\).*/\1/p'; }
+cxx_version() { grep -ao 'GLIBCXX_3\.4\.[0-9]*' "$1" 2>/dev/null | sort -uV | tail -1; }
+older() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$1" ]; }
+
+host_glibc=""
+[ -x "$HOST_LOADER" ] && host_glibc="$(loader_version "$HOST_LOADER")"
+bundled_glibc="$(loader_version "$BUNDLED_LOADER")"
+use_glibc=0
+if [ -n "$bundled_glibc" ] && { [ -z "$host_glibc" ] || older "$host_glibc" "$bundled_glibc"; }; then use_glibc=1; fi
+case "${SB_BUNDLED_GLIBC:-}" in 1) use_glibc=1 ;; 0) use_glibc=0 ;; esac
+
+host_cxx=""
+for f in /usr/lib/libstdc++.so.6 /usr/lib64/libstdc++.so.6 /usr/lib/x86_64-linux-gnu/libstdc++.so.6 /lib/x86_64-linux-gnu/libstdc++.so.6; do
+    if [ -e "$f" ]; then host_cxx="$(cxx_version "$f")"; break; fi
+done
+bundled_cxx="$(cxx_version "$HERE/usr/lib/cxx/libstdc++.so.6")"
+use_cxx=0
+if [ -n "$bundled_cxx" ] && { [ -z "$host_cxx" ] || older "$host_cxx" "$bundled_cxx"; }; then use_cxx=1; fi
+case "${SB_BUNDLED_CXX:-}" in 1) use_cxx=1 ;; 0) use_cxx=0 ;; esac
+
+LIBS="$HERE/usr/lib"
+[ "$use_cxx" = 1 ] && LIBS="$LIBS:$HERE/usr/lib/cxx"
+LOADER="$HOST_LOADER"
+if [ "$use_glibc" = 1 ]; then
+    LIBS="$LIBS:$HERE/usr/lib/glibc"
+    LOADER="$BUNDLED_LOADER"
+fi
+export SB_LOADER="$LOADER" SB_LIBS="$LIBS"
+say "C library: $([ "$use_glibc" = 1 ] && echo bundled || echo system) (system ${host_glibc:-none}, bundled ${bundled_glibc:-none}); C++: $([ "$use_cxx" = 1 ] && echo bundled || echo system)"
+
+# Laptops with an NVIDIA GPU beside another: NVIDIA's PRIME render offload
+# for the game (as the release's launcher does), unless already set.
+if [ -z "${__NV_PRIME_RENDER_OFFLOAD+set}" ] && [ -d /proc/driver/nvidia ]; then
+    others=0
+    for d in /sys/bus/pci/devices/*; do
+        case "$(cat "$d/class" 2>/dev/null)" in 0x03*) ;; *) continue ;; esac
+        [ "$(cat "$d/vendor" 2>/dev/null)" = 0x10de ] || others=$((others + 1))
+    done
+    [ "$others" -gt 0 ] && export __NV_PRIME_RENDER_OFFLOAD=1
+fi
+# Gamescope / Steam Game Mode: the game's own handling (X11 there).
+if [ -n "$GAMESCOPE_WAYLAND_DISPLAY" ] || [ "$XDG_CURRENT_DESKTOP" = gamescope ]; then
+    export NFSMW_GAME_MODE="${NFSMW_GAME_MODE:-1}" SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-x11}"
+fi
+
+if [ "$1" = --game ]; then
+    # This PC's own build of the game (the launcher makes it from the disc image):
+    # one folder per CPU model in the data folder.
+    shift
+    DATA="${XDG_DATA_HOME:-$HOME/.local/share}/speedbreaker-carbon"
+    key="$(grep -m1 '^model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ //' | tr -d '\n' | sha256sum | cut -c1-12)"
+    BIN="${SB_GAME_BIN:-$DATA/engine/$key/SpeedBreaker}"
+    if [ ! -x "$BIN" ]; then
+        say "the game isn't built on this PC yet: start the AppImage, and choose your disc image"
+        exit 1
+    fi
+    exec "$LOADER" --library-path "$LIBS" --argv0 "$BIN" "$BIN" "$@"
+fi
+exec "$LOADER" --library-path "$LIBS" --argv0 "$HERE/usr/bin/sb-launcher" "$HERE/usr/bin/sb-launcher" "$@"

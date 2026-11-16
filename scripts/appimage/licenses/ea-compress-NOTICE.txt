@@ -1,0 +1,468 @@
+nfs-mw — a Rust rewrite of Need for Speed: Most Wanted (2005, PC)
+Copyright (c) 2026 the nfs-mw contributors
+Licensed under MIT OR Apache-2.0 (see LICENSE-MIT and LICENSE-APACHE).
+
+This repository contains no game assets and no decompiled code. The game is read
+at runtime from the user's own installation.
+
+Optional Windows UI reference capture tools use FFmpeg as an external process and
+PyAudioWPatch as an external Python dependency. No upstream implementation is copied.
+  https://ffmpeg.org/ffmpeg-filters.html#gfxcapture
+  https://github.com/s0d3s/PyAudioWPatch
+  Setup and observation limits: docs/ui-reference-capture.md.
+
+Bevy 0.20 — MIT OR Apache-2.0 (dependency).
+  https://github.com/bevyengine/bevy
+  Dynamic soft shadows use Bevy's cascaded shadow maps and Gaussian PCF filtering.
+  The ACES SDR-reference calibration derives the inverse neutral RRT/ODT fit from
+  Bevy's tone mapping shader; no upstream shader is copied.
+  See docs/soft-shadows.md.
+Performance package resolution: original PC 1.3 upgrade behavior inspected
+locally, with dbalatoni13/nfsmw CC0 declarations as a reference.
+  https://github.com/dbalatoni13/nfsmw
+  Spec-first implementation; no decompiled code or game values copied.
+
+Performance tuning: original PC 1.3 limits, equipment gates, profile retention
+and induction/nitrous/cache behavior inspected locally; dbalatoni13/nfsmw CC0
+frontend and physics declarations used as references.
+  https://github.com/dbalatoni13/nfsmw
+  Independent spec-first implementation; no game assets or decompiled code included.
+
+Controller prompt artwork: Kenney Input Prompts 1.5A — CC0 1.0 Universal.
+  https://kenney.nl/assets/input-prompts
+  https://creativecommons.org/publicdomain/zero/1.0/
+  Xbox Series icons are packed into assets/input-prompts/kenney-xbox.png and
+  embedded in the executable. See that folder's README.md for source and layout.
+
+Chameleon engine file formats (string tables, bundle headers, textures): facts about the
+layouts learned from three community tools, read as references only and not copied.
+  https://github.com/YzENT/Chameleon-String-Editor (MIT)
+  https://github.com/DGIorio/bundle_packer_unpacker (MIT)
+  https://github.com/YzENT/Chameleon-dat-to-dds (no license: facts only)
+  See docs/provenance/chameleon-tools.md.
+
+"Need for Speed" and "Most Wanted" are trademarks of Electronic Arts Inc. This
+project is not affiliated with or endorsed by Electronic Arts.
+
+-------------------------------------------------------------------------------
+Third-party source code included in this repository
+-------------------------------------------------------------------------------
+
+Except as listed below, all code in this repository was written for this
+project. When code is ported from a permissively licensed project, its
+copyright and license notice are kept in the ported file and the project is
+listed here.
+
+NFSTools/VaultLib — https://github.com/NFSTools/VaultLib — MIT
+  Copyright (c) 2019 NFS Tools & heyitsleo
+  Portions ported into libs/blackbox-attrib: the PtrN pointer fix-ups and the
+  reading of ClassLoadData, CollectionLoadData, DatabaseLoadData and of
+  Attrib::Array, StringKey, RefSpec and Blob values (VaultLib.Core,
+  VaultLib.LegacyBase). The MIT notice is kept at the top of
+  libs/blackbox-attrib/src/{vault/pointers.rs, class/load.rs,
+  collection/load.rs, database/types.rs, value/decode.rs}.
+
+vgmstream — https://github.com/vgmstream/vgmstream — ISC-style licence
+  Copyright (c) 2008-2025 Adam Gashlin, Fastelbja, Ronny Elfert, bnnm,
+  Christopher Snowhill, NicknineTheEagle, bxaimc, Thealexbarney, CyberBotX,
+  EdnessP, et al.
+  Portions ported into libs/ea-audio: the EA-XA, EA-XAS and EA MicroTalk decoders
+  (src/coding/ea_xa_decoder.c, ea_xas_decoder.c, ea_mt_decoder.c, libs/utkdec.c) and
+  the layouts read by src/meta/ea_schl*.c. The notice is kept at the top of
+  libs/ea-audio/src/codec/{xa.rs, xas.rs, microtalk/*.rs}.
+
+GPUOpen-Effects/FidelityFX-FSR — https://github.com/GPUOpen-Effects/FidelityFX-FSR — MIT
+  Copyright (c) 2021 Advanced Micro Devices, Inc. (ffx_fsr1.h, ffx_a.h)
+  Copyright (c) 2014 Michal Drobot (concepts in the "float approximations" of ffx_a.h)
+  Portions ported into libs/blackbox-gpu-passes: FidelityFX Super Resolution 1, the EASU upscale
+  and the RCAS sharpening, rewritten in WGSL (src/shaders/fsr1.wgsl) with the approximate
+  reciprocal and reciprocal square root helpers of ffx_a.h. The MIT notice is kept at the
+  top of that file. The upstream header files are not vendored.
+
+GPUOpen-LibrariesAndSDKs/FidelityFX-SDK — https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK — MIT
+  Copyright (C) 2024 Advanced Micro Devices, Inc.
+  Pinned to the tag v1.1.4 (commit c6efa6bf7f2027b3ec94f28578bb5965eabb9e55), whose FSR 3 upscaler is
+  version 3.1.4. Portions ported into libs/fsr3-wgpu: the FSR 3.1 temporal upscaler (not frame
+  generation) rewritten in WGSL from sdk/include/FidelityFX/gpu/fsr3upscaler/ffx_fsr3upscaler_{accumulate,
+  callbacks_hlsl,common,luma_instability,luma_pyramid,prepare_inputs,prepare_reactivity,rcas,reproject,
+  resources,sample,shading_change,shading_change_pyramid,upsample}.h, the RCAS of
+  sdk/include/FidelityFX/gpu/fsr1/ffx_fsr1.h, and the host logic of sdk/src/components/fsr3upscaler/
+  ffx_fsr3upscaler.cpp (constants, jitter, quality ratios, pass order); the DX12 pass wrappers were read
+  for the bindings. The MIT notice is kept at the top of every file in libs/fsr3-wgpu/src/shaders/. The
+  upstream files are not vendored; the list is in libs/fsr3-wgpu/README.md.
+
+nfrechette/acl (Animation Compression Library) — https://github.com/nfrechette/acl — MIT
+  Copyright (c) 2017 Nicholas Frechette & Animation Compression Library contributors
+  Read at commit 3ee568542eca4428e1041908b4a644b98e7885bd (develop, 2025-09-13; compressed-track buffer revisions 9
+  and 10, ACL 2.1). Portions ported into libs/blackbox-acl: the decoder of uniformly sampled transform tracks
+  (the layout of the headers and blocks, the bit packing, the range expansion, the keyframe stripping and the
+  interpolation) rewritten in Rust from includes/acl/core/impl/compressed_headers.h and
+  includes/acl/decompression/impl/{decompression,animated_track_cache,constant_track_cache}.transform.h and the
+  headers they use. The MIT notice is kept at the top of libs/blackbox-acl/src/lib.rs. The upstream files are not
+  vendored. See docs/specs/acl-decoder.md and docs/provenance/acl-decoder.md.
+
+iryoku/smaa — https://github.com/iryoku/smaa — SMAA licence (MIT-style)
+  Copyright (C) 2013 Jorge Jimenez, Jose I. Echevarria, Belen Masia, Fernando Navarro, Diego Gutierrez
+  Portions ported into libs/blackbox-smaa: SMAA 1x at the HIGH preset rewritten in WGSL (src/shaders/*.wgsl)
+  from SMAA.hlsl, and the area and search tables generated from Scripts/AreaTex.py and Scripts/SearchTex.py
+  (src/area.rs, src/area_diag.rs, src/search.rs). The notice is kept at the top of each shader file.
+
+codeberg.org/fintelia/smaa-rs (smaa crate 0.21.0) — MIT
+  Copyright (c) 2018 Jonathan Behrens
+  The Rust runner of libs/blackbox-smaa (target, frame, bindings, pipelines, resources) follows its
+  src/lib.rs. The notice is kept at the top of each of those files. Full texts: libs/blackbox-smaa/LICENSE-SMAA.
+
+daddesio/utkencode — https://github.com/daddesio/utkencode — Unlicense (public domain)
+  Original of the MicroTalk (UTK) decoder that vgmstream's utkdec.c derives from.
+  Credited in libs/ea-audio/src/codec/microtalk/.
+
+Fonts embedded in the binary through egui (crate epaint_default_fonts), used by the
+developer console and the performance overlay:
+  Hack Regular        — MIT (Hack and Bitstream Vera licences)
+  Ubuntu-Light        — Ubuntu Font Licence 1.0
+  Noto Emoji          — SIL Open Font License 1.1
+  emoji-icon-font     — MIT
+The licence texts are in the epaint_default_fonts crate (fonts/*.txt) and are
+included in the generated third-party licence file of binary releases.
+
+VP6 video decoder, linked as a git dependency of libs/blackbox-movie (not vendored):
+  ruffle-rs/nihav-vp6 — https://github.com/ruffle-rs/nihav-vp6 — MIT
+    Copyright (c) 2021 Kostya Shishkov
+    The VP5/VP6 decoder of the NihAV project, which its author relicensed under the MIT
+    License for the Ruffle project (COPYING in the repository; see also
+    https://codecs.multimedia.cx/nihav-relicensed-code/). The crates nihav_core,
+    nihav_codec_support and nihav_duck declare no license field, so deny.toml clarifies
+    them. Pinned to commit 12d0bdf10a85641dc2de3d6900c747894431ed77. Only this subset is
+    MIT: the rest of NihAV is AGPL-3.0 and is not used.
+
+Icons
+
+  Discord mark (assets/discord/discord.png) — Simple Icons, https://simpleicons.org — CC0-1.0
+    https://cdn.simpleicons.org/discord rasterised to 128x128 white on transparent. The Discord name
+    and logo are trademarks of Discord Inc., used only to label the Discord settings; not endorsed by
+    Discord. See assets/discord/README.md.
+
+Rust dependencies are fetched by Cargo and keep their own licenses; see
+Cargo.lock and `cargo deny check licenses`. Binary releases will include a
+generated third-party license file.
+
+-------------------------------------------------------------------------------
+References consulted during development
+-------------------------------------------------------------------------------
+
+These projects were read to learn file formats, data layouts and behaviour.
+Unless stated otherwise, nothing from them is vendored, linked or shipped, and
+no code was copied. Facts learned from them (offsets, layouts, IDs, names) are
+documented in docs/ with credit. Policy: docs/licensing.md.
+
+Decompilation and symbols
+  dbalatoni13/nfsmw — https://github.com/dbalatoni13/nfsmw — CC0-1.0
+    Chunk ID names (tools/bchunk_names.py), struct layouts (TextureInfo,
+    eStreamingEntry, TrackStreamingSection, AttribSys classes), PC 1.3 symbol
+    map. Read-only reference; behaviour is reimplemented spec-first.
+    Visual Treatment shader/runtime behavior: docs/specs/visual-treatment.md.
+  Brawltendo/Most-Wanted-Vehicles-Decomp — no license — reference only.
+
+Format readers and tools
+  NFSTools/NFS-ModTools — https://github.com/NFSTools/NFS-ModTools — no license — reference only
+    (solid, scenery and TPK layouts).
+  NFSTools/VaultLib — https://github.com/NFSTools/VaultLib — MIT (AttribSys).
+  NFSTools/Attribulator — https://github.com/NFSTools/Attribulator — no license — reference only.
+  NFSTools/GlobalLib — https://github.com/NFSTools/GlobalLib — MIT (global files, JDLZ).
+  NFSTools/FEngLib — https://github.com/NFSTools/FEngLib — no license — reference only (FEng UI).
+  SpeedReflect/Nikki — https://github.com/SpeedReflect/Nikki — MIT (strings, collision, sun info).
+  SpeedReflect/Binary, NFSTools/Binary — GPL-3.0 — read only.
+  vgmstream — https://github.com/vgmstream/vgmstream — ISC-style (EA audio formats).
+  vgmstream (also RIDE 6 Wwise media and the Crankcase REV model container, run as a separate program by
+    mods/ride6-bikes) and CUE4Parse — https://github.com/FabianFG/CUE4Parse — Apache-2.0 (the external pak reader the
+    ride6-bikes sound commands start; not linked or copied). The pak key was supplied by the user, found at
+    https://cs.rin.ru/forum/viewtopic.php?f=10&t=100672 (docs/provenance/ride6-audio.md).
+  FFmpeg (libavformat/electronicarts.c, libavcodec/vp6.c) — LGPL-2.1+ — read only (movie
+    container facts: docs/provenance/video.md).
+  ruffle-rs/nihav-vp6 — https://github.com/ruffle-rs/nihav-vp6 — MIT (VP6 decoder, used as a
+    dependency; see above).
+  x07x08/nfsmw-save-editor — https://github.com/x07x08/nfsmw-save-editor — Unlicense (save offsets).
+  EA Command & Conquer Generals source, EAC compression library — GPL-3.0 — read for
+    understanding the HUFF codec only; see docs/formats/huff.md.
+
+Engines, viewers and hook projects
+  magcius/noclip.website (src/NeedForSpeedMostWanted) — MIT, partly reverse-engineered — read only.
+    Colour-treatment curves and screen gain map reference: docs/provenance/visual-treatment.md.
+  whoismept/OpenUG2 — MIT. bdrtr/PryHUB — Apache-2.0. OpenNFS/OpenNFS — MIT.
+  veritr1x/nfsmw-recomp — MIT (speed.exe v1.3 hash, loading-path notes).
+  codepdbh/nfsmw-android — https://github.com/codepdbh/nfsmw-android — GPL-3.0, read only.
+    Xbox 360 native renderer and reflection synchronization notes considered as context.
+    No code or assets copied; see docs/provenance/car-reflections.md.
+  hedge-dev/XenosRecomp (copied in codepdbh/nfsmw-android/shaders/XenosRecomp) — MIT,
+  Copyright (c) 2025 hedge-dev and contributors — https://github.com/hedge-dev/XenosRecomp — read only.
+    Xbox 360 shader translator: the control-flow and container design was read for ideas. No code copied.
+    See docs/xenos-shaders/README.md. The fork's own files in that folder are GPL-3.0 (see above).
+  berkayylmao/NFSPluginSDK — BSD-3-Clause. gaycoderprincess/nya-common-nfsmw — MPL-2.0.
+  ThirteenAG/WidescreenFixesPack — MIT (registry key, camera, aspect-aware HUD placement).
+    https://github.com/ThirteenAG/WidescreenFixesPack — reference only; no code copied.
+    NOS trail frame-rate normalization was also read as a reference; see
+    docs/provenance/nitrous-light-trails.md for the independently written effect.
+    Original gameplay camera widescreen projection equations follow the official
+    Rendering.ixx FixFOV=1/Scaling=0 behavior at commit
+    708f7528fb8b54c79d4ac3c6071ea7ccc01ae162; independently written Rust adapter.
+    Copyright (c) 2018 ThirteenAG. See docs/provenance/original-camera-data.md.
+  rng-guy/NFSMWBartender — CC0-1.0.
+  Xbox 360 Stuff Pack — https://nfsmods.xyz/mod/1200 — reference only.
+    elaymm4 and ToruTheRedFox; installed configuration and binary corroborate
+    the widescreen 0.92 UI scale used by the optional HUD preset. No addon code copied.
+  Lovro Pleše (xan1242), NFSMW_XenonEffects — MIT.
+    https://github.com/xan1242/NFSMW_XenonEffects — behavior and configuration reference only.
+    No source or textures copied; procedural spark and contrail presentation is new.
+  MWisBest/OpenNFSTools — no license — reference only (install registry key).
+  yugecin/nfsu2-re — no license — reference only. MaxHwoy/hyperlinked — BSD-3-Clause.
+  TsyVM/MWEncyclopedia — no license — leads only (contains known errors).
+
+Project structure
+  vladtrc/iw4L — https://github.com/vladtrc/iw4L — Apache-2.0
+    Crate layering, install discovery and leak-check ideas. No code copied.
+  chasmlol/2010-rust-rewrite-mashup — Apache-2.0 (with vendored GPL-3.0 parts) — read only.
+
+Input references
+  xan1242/NFS-XtendedInput — https://github.com/xan1242/NFS-XtendedInput — MIT.
+    Reference for configurable per-axis cutoff deadzones and controller mappings. No code copied.
+
+Rendering concepts
+  Intel XeGTAO — https://github.com/GameTechDev/XeGTAO — MIT.
+    Copyright (C) 2016-2021, Intel Corporation.
+    Horizon search, analytic slice integration and static Hilbert/R2 sampling adapted in
+    libs/blackbox-render/src/shaders/ao_horizon.wgsl, which carries the full MIT notice.
+    This is a compact spatial GTAO adaptation, not the complete XeGTAO implementation.
+    The separately selectable XeGTAO spatial mode ports the main pass, depth weighting,
+    packed edge continuity and symmetric 3x3 denoiser from revision
+    a5b1686c7ea37788eeb3576b5be47f7c03db532c. Full MIT notices are retained in
+    ao_xegtao.wgsl and ao_xe_filter.wgsl. The depth weighting adaptation in ao_depth.wgsl
+    is covered by its accompanying Intel MIT notice. See docs/ambient-occlusion.md for deviations.
+    Its depth-prefiltering discussion also informed the independent linear-depth hierarchy in
+    libs/blackbox-render/src/shaders/ao_depth.wgsl and gpu/ao/depth.rs.
+  Quasar — https://github.com/dev25bansal-ops/quasar — MIT.
+    Hemisphere SSAO shader considered as a reference; no code copied.
+    See docs/ambient-occlusion.md for the approach and limitations.
+  NVIDIA GPU Gems 3, chapter 23.4, soft particles — reference only.
+    https://developer.nvidia.com/gpugems/gpugems3/part-iv-image-effects/chapter-23-high-speed-screen-particles
+    Depth-based intersection fading concept; no shader or source code copied.
+
+-------------------------------------------------------------------------------
+Projects whose behaviour we learned from (no code copied)
+-------------------------------------------------------------------------------
+
+giovannosaur/MWDynamicFOV — https://github.com/giovannosaur/MWDynamicFOV — no licence
+  The dynamic FOV camera (crates/nfsmw/src/viewer/camera/dynamic_fov.rs) reproduces
+  the mod's behaviour: the view widens with speed on a cubic ease-in curve. The mod
+  publishes no licence, so none of its code was copied or ported, and its game-memory
+  offsets are not used.
+
+Graphics lab prototypes
+  smaa-rs 0.21.0 - https://codeberg.org/fintelia/smaa-rs - MIT.
+    Test-only dependency: the reference that libs/blackbox-smaa's parity test compares against.
+    Used as a dependency, without temporal resolve.
+  Microsoft Cascaded Shadow Maps - reference only; no code copied.
+    https://learn.microsoft.com/en-us/windows/win32/dxtecharts/cascaded-shadow-maps
+    Stable fitting, cascade overlap, filter guard bands and receiver-plane bias
+    concepts in the native shadow experiment. Implementation is original.
+Graphics lab shadow improvements
+  Directional PCSS concepts: Randima Fernando / NVIDIA, described in GPU Gems 3
+  https://developer.nvidia.com/gpugems/gpugems3/part-ii-light-and-shadows/chapter-8-summed-area-variance-shadow-maps
+  Contact shadow depth ray-march limitations: Epic Games documentation
+  https://dev.epicgames.com/documentation/unreal-engine/contact-shadows?application_version=4.27
+  Conceptual references only; the Rust and WGSL implementation is original.
+Graphics lab ambient lighting
+  Gary King / NVIDIA GPU Gems 2, chapter 10 - reference only; no code copied.
+    https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-10-real-time-computation-dynamic
+    Diffuse irradiance convolution with spherical harmonics. The projection and
+    evaluation shaders are original implementations of the mathematical method.
+
+Original gameplay camera behavior: locally inspected PC 1.3 routines and runtime
+attribute data; independent spec-first implementation, with CC0 declarations
+from dbalatoni13/nfsmw used for names and interface layout only.
+  https://github.com/dbalatoni13/nfsmw
+  See docs/specs/camera-views.md and docs/provenance/original-camera-*.md.
+  No original executable bytes, assets or decompiled code are included.
+
+Original PC world material and atmosphere behavior
+-----------------------------------------------
+The installed PC executable's effect dispatch, embedded D3D9 effects and weather
+logic were inspected as behavioral references, without copying original code,
+bytecode or assets. Independent synthetic D3D9 shader measurements support the
+world/tree/prelit/unfogged, tangent-space normal/specular, reflective scenery,
+architectural glass and sky arithmetic. Reflective road and window shaders were
+measured independently using synthetic inputs; installed material binding and
+weather input logic were inspected separately.
+Specifications and provenance:
+docs/specs/world-material-routing.md, docs/specs/world-atmosphere.md,
+docs/specs/world-sky-shading.md, docs/specs/world-normal-materials.md,
+docs/specs/world-reflect-materials.md, docs/specs/world-window-materials.md and their
+docs/provenance counterparts.
+
+Original PC car material and lighting behavior
+---------------------------------------------
+The installed PC executable's car effect selection, material setup and lighting
+rig setup were inspected as behavioral references. Synthetic D3D9 measurements
+of the original shaders support the independently implemented material equations.
+No original bytecode, decompiled code, game assets or mod assets are included.
+See docs/specs/car-material-shading.md, docs/specs/car-lighting.md and their
+provenance records. Original projected shadow generation remains incomplete.
+
+Extra Options Visual Treatment parameter reference
+--------------------------------------------------
+ExOptsTeam/NFSMWExOpts (GPL-3.0) and the installed plugin were inspected only to
+establish the meaning of user-supplied override parameters. No source was copied
+or ported. See docs/specs/visual-treatment.md and its provenance record.
+  https://github.com/ExOptsTeam/NFSMWExOpts
+
+Original PC projected shadow camera and strength
+-----------------------------------------------
+Locally inspected original routines and receiver shaders are behavioral references.
+Independent synthetic original-instruction fixtures support the camera and strength
+equations. No original code, shaders, bytecode, assets or decompilation are shipped.
+See docs/specs/original-projected-shadows.md and its provenance record.
+
+PsychoV display tone mapper
+--------------------------
+RenoDX / PsychoV by Carlos Lopez Jr. (MIT), pinned at
+83cf7aa5680c7d4ff078ae7bd845d62a2cc8bdea. The specialized test30 WGSL port retains
+the full MIT notice in libs/blackbox-render/src/shaders/psychov/.
+See docs/provenance/psychov.md for defaults, conversion and numerical fixtures.
+  https://github.com/clshortfuse/renodx
+NVIDIA Streamline 2.14.16 integration guidance (MIT-licensed SDK headers and documentation):
+https://github.com/NVIDIA-RTX/Streamline
+The optional native renderer bridge uses SDK headers supplied separately at build time.
+The Reflex, PCL, Frame Generation and separate UI recomposition integration follows
+the SDK's corresponding programming guides. Vulkan presentation flow was also
+checked against NVIDIA's Apache-2.0 vk_streamline sample:
+https://github.com/nvpro-samples/vk_streamline
+HDR10 presentation follows Microsoft's Advanced Color and wgpu's BT.2100 PQ
+surface contracts; color conversion and UI compensation are independently implemented.
+https://learn.microsoft.com/en-us/windows/win32/direct3darticles/high-dynamic-range
+NVIDIA DLSS runtime binaries have separate distribution terms and are not included here.
+
+Windows activity telemetry
+--------------------------
+Original implementation using Microsoft Windows API documentation:
+- GetThreadTimes: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getthreadtimes
+- PDH formatted counter arrays: https://learn.microsoft.com/en-us/windows/win32/api/pdh/nf-pdh-pdhgetformattedcounterarrayw
+- Busiest-engine convention: https://devblogs.microsoft.com/directx/gpus-in-the-task-manager/
+Documentation references only; no third-party implementation code was ported.
+
+Performance trace format
+------------------------
+The original blackbox-trace exporter follows Perfetto's documented Chrome Trace
+Event JSON support (Apache-2.0 documentation; no implementation code copied):
+https://perfetto.dev/docs/getting-started/other-formats
+
+UI platform integration
+------------------------
+Clipboard/browser command handling follows the public arboard and open APIs:
+https://docs.rs/arboard/latest/arboard/
+https://docs.rs/open/latest/open/
+Used as dependencies; no third-party implementation code was copied.
+
+AO sampling decorrelation
+------------------------
+The lowbias32 integer hash in ao_xegtao.wgsl is adapted from Chris Wellons'
+Hash Function Prospector (Unlicense/public domain), README.md lowbias32:
+https://github.com/skeeto/hash-prospector/tree/396dbe235c94dfc2e9b559fc965bcfda8b6a122c
+Pixel/frame seeding and the two AO sample phases are independently implemented.
+
+Custom surface response
+-----------------------
+GGX, Smith, Schlick and environment importance-sampling theory is described in
+Filament: https://google.github.io/filament/main/filament.html (sections 4.2, 4.4, 4.9, 5.3, 5.6 and 9.2).
+Used as mathematical reference; independently implemented, no source code copied.
+
+Enhanced sky and cloud response
+------------------------------
+Cloud density profiles, weather fields, remapping and multiple-octave scattering adapted from
+SkyGL (MIT), copyright 2026 Ivan Vasiliev:
+https://github.com/kotivas/skygl/tree/edbbb0148091bd85261dec0a2164bc026ff01a3e
+The complete notice is retained in sky_clouds.wgsl. Noise generation and native
+integration are independently implemented; no SkyGL noise or atmosphere source
+was copied. Base/detail texture structure follows Guerrilla's 2015 presentation:
+https://www.guerrilla-games.com/read/the-real-time-volumetric-cloudscapes-of-horizon-zero-dawn
+Architecture references also include Hillaire's Sky Atmosphere (MIT):
+https://github.com/sebh/UnrealEngineSkyAtmosphere
+and Godot's shared sky/environment design:
+https://godotengine.org/article/custom-sky-shaders-godot-4-0/
+See docs/enhanced-sky.md for the prototype model and limits.
+
+PC precipitation, screen-water optics, surface tire effects and rain audio behavior
+were independently specified in docs/specs/rain-pc.md before implementation.
+Original executable analysis and dbalatoni13/nfsmw (CC0-1.0) were read-only references;
+no original code or game assets are distributed. https://github.com/dbalatoni13/nfsmw
+
+Enhanced wet-surface design references
+--------------------------------------
+Sebastien Lagarde, Water drop 3a / 3b / 4a (2013): wet-material response,
+water accumulation and reflection principles. Conceptual references only;
+no article code or assets copied and no permissive license assumed.
+https://seblagarde.wordpress.com/2013/03/19/water-drop-3a-physically-based-wet-surfaces/
+https://seblagarde.wordpress.com/2013/04/14/water-drop-3b-physically-based-wet-surfaces/
+https://seblagarde.wordpress.com/2013/09/08/water-drop-4a-reflecting-wet-world/
+
+Vulkan ray-query API references
+-------------------------------
+wgpu v30 ray_scene and ray_shadows examples (MIT OR Apache-2.0), gfx-rs contributors:
+https://github.com/gfx-rs/wgpu/tree/v30.0.0/examples/features/src/ray_scene
+https://github.com/gfx-rs/wgpu/tree/v30.0.0/examples/features/src/ray_shadows
+Read as references for BLAS/TLAS descriptors and WGSL intersection queries.
+Native reflection material adaptation is independently implemented.
+
+Hybrid sun-shadow architecture reference
+---------------------------------------
+AMD FidelityFX Hybrid Shadows documentation:
+https://gpuopen.com/fidelityfx-hybrid-shadows/
+Reference for combining cascaded and ray-traced visibility; no sample code copied.
+
+Finite-light shadow sampling reference
+---------------------------------------
+Khronos Vulkan Documentation: Shadows, Ray Query Integration.
+https://docs.vulkan.org/tutorial/latest/Building_a_Simple_Engine/Lighting_Materials/07_shadows.html
+Documentation reference only; finite-sun sampling and spatial filtering independently implemented.
+
+Rear-view presentation references (GPL-3.0, read only)
+----------------------------------------------------
+AeroWidescreen/NFSHDReflections:
+https://github.com/AeroWidescreen/NFSHDReflections/tree/main/SOURCE/NFSMW
+SpeedBreakerProject/speedbreaker (Xbox 360 mirror/ultrawide architecture notes):
+https://github.com/SpeedBreakerProject/speedbreaker/blob/main/runtime/game/ultrawide.cpp
+madelrandel-blip/NFSMW-Recompiled (Xbox 360 port identification):
+https://github.com/madelrandel-blip/NFSMW-Recompiled
+No code copied. PC bezel contour and bilinear-footprint coverage independently implemented.
+
+Reflection integration filtering references
+-------------------------------------------
+Google Filament (Apache-2.0), pre-filtered importance sampling theory:
+https://google.github.io/filament/main/filament.html
+rustyAC CSP rendering research (GPL-3.0-or-later, reference only):
+https://github.com/thesupersupersigma/rustyAC/blob/master/docs/csp/rendering_config.md
+No implementation code copied. Source footprints, GGX PDF LOD and cube-edge filtering independently implemented.
+
+Directional world ambient lighting
+----------------------------------
+Google Filament (Apache-2.0), spherical-harmonic diffuse irradiance theory:
+https://google.github.io/filament/Filament.html#lighting/imagebasedlights/irradianceenvironmentmaps
+Independent implementation using this renderer's analytic sky and SH basis; no external code copied.
+
+Local light fog and wet-road highlights
+---------------------------------------
+Sébastien Hillaire, Towards Unified and Physically-Based Volumetric Lighting in Frostbite:
+https://www.advances.realtimerendering.com/s2015/index.html
+Tatarchuk and Isidoro, Artist-Directable Real-Time Rain Rendering in City Environments:
+https://advances.realtimerendering.com/s2006/Chapter3-Artist-Directable_Real-Time_Rain_Rendering_in_City_Environments.pdf
+Rendering references only. No code or assets copied.
+
+Enhanced exhaust appearance
+--------------------------
+THREE.Fire by mattatz, Copyright (c) 2015 mattatz, MIT.
+https://github.com/mattatz/THREE.Fire
+The volumetric flame WGSL ports FireShader.js; assets/effects/three-fire.png
+is the unmodified Fire.png lookup. License: libs/blackbox-gpu-passes/LICENSE-THREE-FIRE.
+Simplex noise: Ashima Arts, Copyright (C) 2011, and Stefan Gustavson,
+Copyright (C) 2011-2016, MIT. https://github.com/ashima/webgl-noise
+License: libs/blackbox-gpu-passes/LICENSE-FLAME-NOISE.
+Pyrotechnique by Elodin Systems (Apache-2.0) was a visual/workflow reference only:
+https://github.com/elodin-sys/pyrotechnique . No code or assets copied.
