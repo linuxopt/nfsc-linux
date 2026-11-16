@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/speedbreaker-carbon-banner-dark.png">
-    <img alt="SpeedBreaker: Carbon" src="assets/speedbreaker-carbon-banner-light.png" width="800">
+    <source media="(prefers-color-scheme: dark)" srcset="../assets/speedbreaker-carbon-banner-dark.png">
+    <img alt="SpeedBreaker: Carbon" src="../assets/speedbreaker-carbon-banner-light.png" width="800">
   </picture>
 </p>
 
@@ -24,7 +24,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/speedbreaker-carbon-00-prologue-m3-palmont-skyline.jpg" alt="A cutscene at night: the silver-and-blue BMW M3 GTR slides sideways in tyre smoke past a crash barrier and a stop sign, with the lights of Palmont City behind it" width="100%">
+  <img src="../assets/screenshots/speedbreaker-carbon-00-prologue-m3-palmont-skyline.jpg" alt="A cutscene at night: the silver-and-blue BMW M3 GTR slides sideways in tyre smoke past a crash barrier and a stop sign, with the lights of Palmont City behind it" width="100%">
   <br>
   <sub>The prologue: the M3 GTR at the edge of Palmont, rendered at 2560x1440.</sub>
 </p>
@@ -101,16 +101,16 @@ every file. Then you race through Palmont, with things the Xbox 360 couldn't do:
 
 <table>
   <tr>
-    <td width="50%"><img src="assets/screenshots/speedbreaker-carbon-05-nitrous-trails-143mph.jpg" alt="Racing downtown at night on nitrous: the red car from behind at 143 mph, with long red light trails, the race HUD and the rear-view mirror"><br><sub>Nitrous at 143 mph: the light trails at the console's length.</sub></td>
-    <td width="50%"><img src="assets/screenshots/speedbreaker-carbon-07-4k-speedbreaker-chevrons.jpg" alt="Speedbreaker slow motion: the red car from behind at a junction, passing a wall of glowing purple chevrons, with only the Speedbreaker bar on screen"><br><sub>Speedbreaker: slow motion past the neon chevrons, at 3840x2160.</sub></td>
+    <td width="50%"><img src="../assets/screenshots/speedbreaker-carbon-05-nitrous-trails-143mph.jpg" alt="Racing downtown at night on nitrous: the red car from behind at 143 mph, with long red light trails, the race HUD and the rear-view mirror"><br><sub>Nitrous at 143 mph: the light trails at the console's length.</sub></td>
+    <td width="50%"><img src="../assets/screenshots/speedbreaker-carbon-07-4k-speedbreaker-chevrons.jpg" alt="Speedbreaker slow motion: the red car from behind at a junction, passing a wall of glowing purple chevrons, with only the Speedbreaker bar on screen"><br><sub>Speedbreaker: slow motion past the neon chevrons, at 3840x2160.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="assets/screenshots/speedbreaker-carbon-11-prologue-canyon-overhead.jpg" alt="The prologue seen from above: the BMW M3 GTR on a cracked canyon road at night, with a rival's car at the top left"><br><sub>The prologue's canyon road, from above.</sub></td>
-    <td width="50%"><img src="assets/screenshots/speedbreaker-carbon-20-16x10-canyon-duel.jpg" alt="A Canyon Duel at night in a 16:10 frame: the red-and-white striped car on a winding mountain road behind the leader, with the duel's points and gap on the HUD"><br><sub>16:10, the Steam Deck's shape: a Canyon Duel.</sub></td>
+    <td width="50%"><img src="../assets/screenshots/speedbreaker-carbon-11-prologue-canyon-overhead.jpg" alt="The prologue seen from above: the BMW M3 GTR on a cracked canyon road at night, with a rival's car at the top left"><br><sub>The prologue's canyon road, from above.</sub></td>
+    <td width="50%"><img src="../assets/screenshots/speedbreaker-carbon-20-16x10-canyon-duel.jpg" alt="A Canyon Duel at night in a 16:10 frame: the red-and-white striped car on a winding mountain road behind the leader, with the duel's points and gap on the HUD"><br><sub>16:10, the Steam Deck's shape: a Canyon Duel.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="assets/screenshots/speedbreaker-carbon-09-race-finish-chevrons.jpg" alt="The finish camera: a pack of cars crossing a city street in front of a wall of glowing purple chevrons"><br><sub>The finish at the neon chevrons.</sub></td>
-    <td width="50%"><img src="assets/screenshots/speedbreaker-carbon-22-installer-every-file-verified.png" alt="The first-run installer after the install: every file matched the known-good disc, with a Start the game button"><br><sub>First run: every file matched the known-good disc.</sub></td>
+    <td width="50%"><img src="../assets/screenshots/speedbreaker-carbon-09-race-finish-chevrons.jpg" alt="The finish camera: a pack of cars crossing a city street in front of a wall of glowing purple chevrons"><br><sub>The finish at the neon chevrons.</sub></td>
+    <td width="50%"><img src="../assets/screenshots/speedbreaker-carbon-22-installer-every-file-verified.png" alt="The first-run installer after the install: every file matched the known-good disc, with a Start the game button"><br><sub>First run: every file matched the known-good disc.</sub></td>
   </tr>
 </table>
 
@@ -133,7 +133,7 @@ Each link downloads the newest release. Every file and its `.sha256` checksum fi
 [latest release page][releases]. To check a download, put its `.sha256` file next to it and run
 `shasum -a 256 -c SpeedBreaker-Carbon-macos.dmg.sha256` on a Mac, or
 `sha256sum -c SpeedBreaker-Carbon-steamos-x86_64.tar.xz.sha256` on SteamOS (with your file's
-name): it should say OK. What changed in each release is in [CHANGELOG.md](CHANGELOG.md).
+name): it should say OK. What changed in each release is in [CHANGELOG.md](../CHANGELOG.md).
 
 ### System requirements
 
