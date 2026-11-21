@@ -68,9 +68,15 @@ namespace
         {
             path = p;
             std::ifstream f(p);
+            auto trim = [](std::string t) {
+                while (!t.empty() && (t.back() == ' ' || t.back() == '\t' || t.back() == '\r')) t.pop_back();
+                while (!t.empty() && (t[0] == ' ' || t[0] == '\t')) t.erase(0, 1);
+                return t;
+            };
+            // "key=value" lines ("key = value" too: RecompLauncher's settings edit this file).
             for (std::string line; std::getline(f, line);)
-                if (size_t eq = line.find('='); eq != std::string::npos && line[0] != '#')
-                    values[line.substr(0, eq)] = line.substr(eq + 1);
+                if (size_t eq = line.find('='); eq != std::string::npos && line[0] != '#' && line[0] != ';' && line[0] != '[')
+                    values[trim(line.substr(0, eq))] = trim(line.substr(eq + 1));
         }
         void Save()
         {
@@ -167,6 +173,10 @@ namespace
         bool updateDismissed = false, showNotes = false, restartRequested = false;
         std::string appImagePath = Env("APPIMAGE");  // set by the AppImage runtime
         bool headless = false;  // --update, --setup, --build-ai: no browser, the terminal says it
+        // Started by RecompLauncher (recomplauncher.json): it installs this
+        // game's updates, so the launcher never checks for or installs any.
+        bool recomp = Env("RECOMPLAUNCHER") == "1";
+        bool prepareOnly = false;  // --prepare: install and build, no AI textures (the first Play makes them)
         bool gameRunning = false;
         Page page = Page::Play;
         std::string notice;
@@ -567,7 +577,7 @@ namespace
             if (ok && state.Get("fingerprint") != hw.Fingerprint())
                 AutoTune(true);
             // Then the AI enhancement, before the first race.
-            if (ok && AiEnabled() && !PackCount())
+            if (ok && AiEnabled() && !PackCount() && !prepareOnly)
                 StartAiBuild();
         }
 
@@ -907,11 +917,19 @@ namespace
         }
 
         bool MenuEntryWanted() const { return state.Get("menu_entry", "true") == "true" && !appImagePath.empty(); }
-        void UpdateMenuEntry(bool iconsChanged)
+        // claim: the System page's checkbox (this AppImage takes the entry).
+        void UpdateMenuEntry(bool iconsChanged, bool claim = false)
         {
             if (!MenuEntryWanted() || !fs::exists(icons::AppIcon(IconDir(), 256)))
                 return;
-            if (!iconsChanged && icons::MenuEntryTarget() == appImagePath)
+            std::string target = icons::MenuEntryTarget();
+            // An entry for another AppImage that's still there (a second copy,
+            // a test download) stays its own: the entry follows an AppImage
+            // that was moved, not every copy that runs.
+            std::error_code ec;
+            if (!claim && !target.empty() && target != appImagePath && fs::exists(target, ec))
+                return;
+            if (!iconsChanged && target == appImagePath)
                 return;
             std::string error;
             if (icons::InstallMenuEntry(appImagePath, IconDir(), error))
@@ -1019,6 +1037,9 @@ namespace
             if (StateOn("hidden_dev"))
                 extra += extra.empty() ? "dev" : ",dev";
             env.push_back("NFSC_EXTRA_CARS=" + extra);
+            // RecompLauncher's Big Picture mode (a controller, the couch): full screen.
+            if (Env("RECOMPLAUNCHER_MODE") == "bigpicture")
+                env.push_back("NFSMW_FULLSCREEN=1");
             // The game window's title bar icon: the game's own (TickIcons).
             if (fs::path icon = icons::AppIcon(IconDir(), 256); fs::exists(icon))
                 env.push_back("NFSC_WINDOW_ICON=" + icon.string());
@@ -1152,6 +1173,12 @@ namespace
         {
             if (upd == Upd::Checking)
                 return;
+            if (recomp)
+            {
+                upd = Upd::Current;
+                updateMessage = "RecompLauncher installs this game's updates.";
+                return;
+            }
             std::string curl = update::FindCurl();
             if (curl.empty())
             {
@@ -2092,6 +2119,11 @@ namespace
     {
         ImGui::SeparatorText("Updates");
         ImGui::Text("NFSC Linux v%s (based on SpeedBreaker: Carbon 0.1.3), from github.com/%s", RunningVersion().c_str(), NFSC_GITHUB_REPO);
+        if (recomp)
+        {
+            ImGui::TextUnformatted("Started from RecompLauncher: it installs this game's updates.");
+            return;
+        }
         bool atStart = CheckAtStart();
         if (ImGui::Checkbox("Check for updates each time the launcher starts", &atStart))
             state.Set("update_check", atStart ? "true" : "false");
@@ -2152,7 +2184,7 @@ namespace
                 state.Set("menu_entry", on ? "true" : "false");
                 std::string error;
                 if (on)
-                    UpdateMenuEntry(true);
+                    UpdateMenuEntry(true, true);
                 else if (icons::RemoveMenuEntry(error))
                     Log("Applications menu: entry removed");
                 else
@@ -2160,7 +2192,8 @@ namespace
             }
             ImGui::EndDisabled();
             Help("A menu entry (~/.local/share/applications/nfsc-linux.desktop) that starts this AppImage, with the icon from your "
-                 "disc, AI-upscaled. The launcher's and the game's windows carry the same icon in their title bars.");
+                 "disc, AI-upscaled. The launcher's and the game's windows carry the same icon in their title bars. It follows this AppImage "
+                 "when you move it; while another copy has it, turning this off and on moves it here.");
             if (appImagePath.empty())
                 ImGui::TextDisabled("(only when the launcher runs from its AppImage)");
             else if (on && !iconsReady)
@@ -2197,16 +2230,28 @@ int main(int argc, char** argv)
     // --update: check for a newer release, install it if there is one, then exit.
     bool headlessUpdate = std::find(args.begin(), args.end(), "--update") != args.end();
     bool updateStarted = false;
-    app.headless = headlessUpdate || headlessAi || std::find(args.begin(), args.end(), "--setup") != args.end();
+    // --prepare [--game=<disc image>]: RecompLauncher's setup step (recomplauncher.json), no
+    // window: install the game from the disc image (unless it's installed) and build it for this
+    // PC (unless it's built), printing "progress <0-1> <step>" lines; exit 0 when it's ready to
+    // play. Without --game, only from the installed game (RecompLauncher's keeps_copy).
+    bool prepare = std::find(args.begin(), args.end(), "--prepare") != args.end();
+    std::string prepareImage;
+    for (auto& a : args)
+        if (a.rfind("--game=", 0) == 0)
+            prepareImage = a.substr(7);
+    app.prepareOnly = prepare;
+    app.headless = headlessUpdate || headlessAi || prepare || std::find(args.begin(), args.end(), "--setup") != args.end();
     // --setup <disc image>: the whole first run without the clicks (build, install, AI textures).
     std::string setupImage;
     if (auto it = std::find(args.begin(), args.end(), "--setup"); it != args.end() && it + 1 != args.end())
         setupImage = *(it + 1);
 
     std::string error;
-    if (!gfx::Init("NFSC Linux", 1100, 700, app.hw, error))
+    if (!gfx::Init("NFSC Linux", 1100, 700, app.hw, error, prepare))
     {
         fprintf(stderr, "[launcher] %s\n", error.c_str());
+        if (prepare)
+            return 1;
         // No window: start the game straight away (it says what's wrong itself).
         app.PickGameBinary();
         auto a = app.GameArgv({});
@@ -2253,8 +2298,36 @@ int main(int argc, char** argv)
     if (!app.hw.x86_64_v3)
         app.notice = "This CPU lacks AVX2 (x86-64-v3): the game needs an Intel Haswell / AMD Zen or newer CPU.";
     // Updates: GitHub's newest release, each time the launcher starts (System > Updates).
-    if (headlessUpdate || (app.CheckAtStart() && setupImage.empty() && !headlessAi && !headlessPlay))
+    if (headlessUpdate || (app.CheckAtStart() && setupImage.empty() && !headlessAi && !headlessPlay && !prepare))
         app.StartUpdateCheck();
+    int exitCode = 0;
+    if (prepare)
+    {
+        // Exit codes (recomplauncher.json's exit_codes): 2 no copy of the game, 3 can't build here.
+        if (app.gameDir && app.GameBuilt())
+            app.Log("The game is installed and built for this PC.");
+        else if (!app.CanBuild())
+            exitCode = 3;
+        else if (app.gameDir)
+            app.StartBuild();
+        else if (!prepareImage.empty())
+            app.StartSetup(prepareImage);
+        else
+            exitCode = 2;
+        if (exitCode)
+        {
+            app.Log(exitCode == 2 ? "No disc image, and the game isn't installed." : app.notice);
+            gfx::Shutdown();
+            return exitCode;
+        }
+        if (!app.job.active)
+        {
+            printf("progress 1 Ready to play\n");
+            fflush(stdout);
+            gfx::Shutdown();
+            return 0;
+        }
+    }
     if (!setupImage.empty())
         app.StartSetup(setupImage);
     else if (headlessAi)
@@ -2263,6 +2336,8 @@ int main(int argc, char** argv)
         app.Play();
 
     bool quit = false;
+    bool played = false;  // --play: the game ran (the launcher exits with it)
+    std::string lastProgress;
     while (!quit)
     {
         SDL_Event e;
@@ -2309,6 +2384,41 @@ int main(int argc, char** argv)
         }
         if ((headlessAi || !setupImage.empty()) && !app.job.active)
             quit = true;
+        if (prepare)
+        {
+            // RecompLauncher's progress bar: "progress <0-1> <text>" on stdout.
+            if (app.job.active)
+            {
+                std::string line = std::format("progress {:.2f} {}", app.JobProgress(), app.job.stepTitle);
+                if (line != lastProgress)
+                {
+                    lastProgress = line;
+                    printf("%s\n", line.c_str());
+                    fflush(stdout);
+                }
+            }
+            else
+            {
+                app.CheckWhere();
+                bool ok = !app.job.failed && app.gameDir && app.GameBuilt();
+                if (ok)
+                    printf("progress 1 Ready to play\n");
+                fflush(stdout);
+                exitCode = ok ? 0 : 1;
+                quit = true;
+            }
+        }
+        // --play: the launcher goes when the game does (RecompLauncher, Steam shortcuts).
+        if (headlessPlay)
+        {
+            if (app.gameRunning)
+                played = true;
+            else if (played && !app.job.active)
+            {
+                exitCode = app.game.ExitCode();
+                quit = true;
+            }
+        }
         if (!gfx::BeginFrame())
         {
             SDL_Delay(50);
@@ -2333,5 +2443,5 @@ int main(int argc, char** argv)
         cargs.push_back(nullptr);
         execv(app.appImagePath.c_str(), cargs.data());
     }
-    return 0;
+    return exitCode;
 }

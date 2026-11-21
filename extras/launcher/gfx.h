@@ -11,7 +11,8 @@ struct SDL_Window;
 namespace launcher::gfx
 {
     // Creates the window and Vulkan (lists every GPU into hw.gpus). False: no Vulkan.
-    bool Init(const char* title, int w, int h, Hardware& hw, std::string& error);
+    // hidden: no window on screen (--prepare: a step with no window).
+    bool Init(const char* title, int w, int h, Hardware& hw, std::string& error, bool hidden = false);
     // Begin a frame (false: skip it, the window is minimized).
     bool BeginFrame();
     void EndFrame();

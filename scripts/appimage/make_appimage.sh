@@ -110,6 +110,10 @@ cp "$ROOT"/scripts/appimage/licenses/* "$SHARE/licenses/"
 # git-ignored game files, generated code or toolchain).
 ( cd "$ROOT" && git ls-files -co --exclude-standard -z | tar --null -T - -cJf "$SHARE/source.tar.xz" --transform 's,^,speedbreaker-carbon/,' )
 echo "NFSC Linux $VERSION (AppImage, $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown))" > "$SHARE/VERSION"
+# RecompLauncher (recomplauncher.com) reads its profile from the AppDir's root: how it sets the
+# game up from the player's disc (--prepare), starts it (--play), its settings and saves. Its
+# prepare.version is this release's, so every update builds the game again when it must.
+sed "s/@VERSION@/$VERSION/" "$ROOT/scripts/appimage/recomplauncher.json" > "$APPDIR/recomplauncher.json"
 
 # Everything copied from this machine's packages: their licenses and sources.
 "$ROOT/scripts/appimage/collect_licenses.sh" "$APPDIR" "$SHARE/licenses"

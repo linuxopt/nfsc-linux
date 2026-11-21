@@ -64,7 +64,7 @@ namespace launcher::gfx
         return ok;
     }
 
-    bool Init(const char* title, int w, int h, Hardware& hw, std::string& error)
+    bool Init(const char* title, int w, int h, Hardware& hw, std::string& error, bool hidden)
     {
         // The window's class (X11's WM_CLASS, Wayland's app_id): the
         // applications menu entry's (icons.h), so taskbars show its icon.
@@ -76,7 +76,7 @@ namespace launcher::gfx
         }
         float scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
         if (scale <= 0) scale = 1;
-        s_window = SDL_CreateWindow(title, int(w * scale), int(h * scale), SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+        s_window = SDL_CreateWindow(title, int(w * scale), int(h * scale), SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | (hidden ? SDL_WINDOW_HIDDEN : 0));
         if (!s_window)
         {
             error = std::format("window: {}", SDL_GetError());

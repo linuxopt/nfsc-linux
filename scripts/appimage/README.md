@@ -92,6 +92,23 @@ sequences, the boss introductions and defeats, the crew introductions, the canyo
 tutorials (one of each, NTSC and English). The game shows each one only once. They play in the PC's
 own video player (VLC, mpv or ffplay; WMV3 video with WMA Pro sound).
 
+## RecompLauncher
+
+The AppImage carries a `recomplauncher.json` at its root (from `scripts/appimage/recomplauncher.json`,
+its `prepare.version` set to the release's), the profile [RecompLauncher](https://recomplauncher.com)
+reads. RecompLauncher unpacks the AppImage and runs its `AppRun` (with `RECOMPLAUNCHER=1`, no
+`APPIMAGE`):
+
+| | |
+|---|---|
+| Setup | `--prepare --game=<disc image>`: no window; installs the game from the image unless it's installed, builds it for this CPU unless it's built, and prints `progress <0-1> <step>` lines. Exit 0 ready, 1 failed, 2 no disc image and nothing installed, 3 a CPU without AVX2. Without `--game` it builds from the installed game (after an update). The AI textures are made on the first Play, in the launcher's window. |
+| Play | `--play`: straight into the game; the launcher exits with it, with the game's exit code. |
+| Settings | Window, internal resolution, frame rate, V-Sync and upscaling (`settings.toml`), Unlock all and the hidden content options (`launcher.ini`), on the game's page. |
+| Saves, logs | `~/.local/share/speedbreaker-carbon/save` and `logs`: the game keeps its usual folders, so a game set up with the AppImage alone is found ready. |
+| Updates | From RecompLauncher only: the launcher never checks for or installs one itself. |
+
+Big Picture mode (`RECOMPLAUNCHER_MODE=bigpicture`) plays full screen.
+
 ## Hardware auto-detection
 
 - **CPU:** the game's code is compiled on the PC for its exact CPU (`-march=native`); the engine

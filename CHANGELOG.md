@@ -5,6 +5,25 @@ SpeedBreaker: Carbon, the project it's a fork of (v0.1.3 and earlier). Each rele
 GitHub start from its entry here, and the game shows the entry once, the first time a new version
 starts (offline: it's built into the game).
 
+## v1.2.1
+
+### What's new
+
+- **RecompLauncher support:** the AppImage carries a `recomplauncher.json`, so
+  [RecompLauncher](https://recomplauncher.com) can install and update NFSC Linux, set it up from
+  your disc image (installing the game and building it for your CPU, with its progress bar) and
+  start the game straight from its library. The game's page there has the main video settings,
+  Unlock all and the hidden content options; saves and logs are where RecompLauncher can back
+  them up. Under RecompLauncher the launcher never checks for or installs updates itself, and
+  Big Picture mode plays full screen.
+- **`--play`** now closes the launcher when the game closes.
+
+### Fixes
+
+- **Applications menu entry:** a second copy of the AppImage (a test download, a backup) no
+  longer takes the entry over when it starts. The entry still follows an AppImage that was moved
+  or deleted; to move it to another copy, turn it off and on again under System > Desktop.
+
 ## v1.2.0
 
 ### What's new

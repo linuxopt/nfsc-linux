@@ -40,6 +40,7 @@ that stands in for the console. This fork keeps all of that and adds:
 | **The game's own icons** | The title icon and achievement icons come from each player's `default.xex`, AI-upscaled 4x. They are the launcher's page icons, the title bar and taskbar icon of both windows, and the icon of an applications menu entry. None ship with the AppImage. |
 | **Hidden content** (opt-in) | The game's police cars and its developer and story cars in Quick Race's car select, and EA's debug car menu (CAR(DEBUG)) on the main menu: all of them are in the retail game, none was ever offered. |
 | **Movies** | Every cutscene on the disc, in story order, to watch again. |
+| **RecompLauncher support** | A `recomplauncher.json` in the AppImage: [RecompLauncher](https://recomplauncher.com) installs, sets up (from the player's disc) and updates the game, with its settings on the game's page. |
 | **Unlock all** (opt-in) | The game's own debug "unlock all things" flag, plus the DLC check, for every car, part and race. Off by default; saves never record it. |
 
 ## Download and play
@@ -58,6 +59,9 @@ that stands in for the console. This fork keeps all of that and adds:
 4. **PLAY.**
 
 Or without clicks: `./NFSC-Linux-x86_64.AppImage --setup /path/to/your.iso`.
+
+Or from [RecompLauncher](https://recomplauncher.com): install NFSC Linux there and give it your disc
+image; it sets the game up and starts it (see [scripts/appimage/README.md](scripts/appimage/README.md#recomplauncher)).
 
 **Needs:** x86-64 Linux, a CPU with AVX2 (Intel Haswell / AMD Zen or later), a Vulkan 1.2 GPU
 with BC texture support, about 8 GB of free space (5.4 GB game, ~2 GB AI textures) and ~1.5 GB of
@@ -172,8 +176,8 @@ history is in [CHANGELOG.md](CHANGELOG.md).
 | `runtime/report/build_info.cpp` | Names x86-64-v4 builds in the log |
 | `runtime/game/game_info.h` | The app is *NFSC Linux*; its releases (Check for Updates, issues) are this repository's; its window class is `nfsc-linux` |
 | `runtime/main.cpp`, `runtime/video/presenter.cpp` | The window class (`SB_APP_ID`) and the title bar icon from `NFSC_WINDOW_ICON` (the launcher's, from the disc) |
-| `runtime/CMakeLists.txt`, `recomp/CMakeLists.txt`, `CMakeLists.txt` | `SB_X86_LEVEL` (x86-64-v3 or -v4), xxHash include, `SB_EXTRAS` for the tools below; nfsc-linux's version (`SB_VERSION_CARBON` 1.2.0, from SpeedBreaker: Carbon 0.1.3) and repository (`NFSC_GITHUB_REPO`) |
-| `CHANGELOG.md` | The v1.0.0, v1.1.0 and v1.2.0 entries (the game's "What's new" note) |
+| `runtime/CMakeLists.txt`, `recomp/CMakeLists.txt`, `CMakeLists.txt` | `SB_X86_LEVEL` (x86-64-v3 or -v4), xxHash include, `SB_EXTRAS` for the tools below; nfsc-linux's version (`SB_VERSION_CARBON` 1.2.1, from SpeedBreaker: Carbon 0.1.3) and repository (`NFSC_GITHUB_REPO`) |
+| `CHANGELOG.md` | The v1.0.0, v1.1.0, v1.2.0 and v1.2.1 entries (the game's "What's new" note) |
 
 **New tools (`extras/`, built with `-DSB_EXTRAS=ON`)**
 
