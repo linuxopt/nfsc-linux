@@ -25,6 +25,7 @@
 // Without it, none of this changes anything.
 #include <stdafx.h>
 #include <kernel/function.h>
+#include "hidden_content.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -68,6 +69,7 @@ PPC_FUNC(sub_821E5A58)
     __imp__sub_821E5A58(ctx, base);
     if (s_unlockAll)
         PPC_STORE_U8(kUnlockAllThings, 1);
+    hidden::OnBoot(base);  // hidden_content.cpp: the debug menu's flag
 }
 
 // The profile serializer: the flag stays out of saves, in either direction.

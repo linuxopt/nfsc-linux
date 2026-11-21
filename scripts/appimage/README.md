@@ -36,6 +36,7 @@ AppImage (a newer engine) rebuilds it automatically the next time you press PLAY
 | Saves | Back up, restore, import, export, delete; a save editor (find a 32-bit value such as cash, narrow it down, set it) |
 | Mods | Add (folder or archive), enable/disable, order, remove |
 | DLC | Add your own Xbox 360 Marketplace packages (CON/LIVE files) or folders; remove |
+| Movies | Every cutscene on the disc, to watch again in your video player |
 | System | **Updates** (version, check now, check at startup), hardware report, which GPU the game uses, the **applications menu entry**, **Rebuild the game for this PC**, data/log folders |
 
 Once the game is installed, the launcher takes its icons from your `default.xex`: the title icon
@@ -59,6 +60,37 @@ places: the car lot, career, parts, races) is set at boot, and the downloadable-
 every Marketplace item is installed, so the Collector's Edition and Marketplace cars on the disc are
 all there. Saves never record it: turn it off and the game's own progress is back.
 (`runtime/game/carbon/unlock_all.cpp`; `NFSMW_UNLOCK_ALL=1` when starting the game by hand.)
+
+## Hidden content
+
+All of this is in the retail Xbox 360 game but was never offered; it's off by default (Play page).
+
+- **Police cars in Quick Race / Developer and story cars in Quick Race.** The front end's car list
+  holds 200 records (a handle, the car's attribute key, its filter bits). When Quick Race's car select
+  opens, a record goes into a free slot for each hidden car, and its unlock check says yes. The cars
+  then show at the end of the Stock list. There are 15 police cars (the Palmont PD1/PD2/PD3, the ghost
+  cars, the K-9 SUVs, the GTO, Cross's Corvette, the player cop cars of online Pursuit Tag) and 28
+  developer and story cars (test and demo cars, the bosses' and crew's cars, the fire and dump
+  trucks). The records come out again at the map and the main menu, and at least 12 slots always stay
+  free, so the career never runs out of room and saves don't keep them. The unused 911 Turbo S is
+  left out: it has no model, only a placeholder.
+- **Debug car menu.** The main menu adds a tenth option, CAR(DEBUG), only while a debug byte
+  (`0x82C64FEF`) is set, and nothing in the retail game sets it. It opens EA's debug car screen
+  (`UI_DebugCarCustomize.fng`): every vehicle, every part slot.
+- **Race modes.** Pursuit Tag and Pursuit Knockout, online-only on PC, are already in the 360
+  version's Quick Race. Checkpoint races are in Quick Race too once unlocked (*Unlock all* does that).
+  The game's race-type table also lists Drag, Knockout, Tollbooth and Cash Grab, but the game data has
+  no Quick Race events of those types, so there's nothing to play.
+
+(`runtime/game/carbon/hidden_content.cpp`; `NFSC_EXTRA_CARS=cops,dev` and `NFSC_DEBUG_MENU=1` when
+starting the game by hand.)
+
+## Movies
+
+The **Movies** page lists every cutscene on the disc (`Movies/*.wmv`), in story order: the 11 story
+sequences, the boss introductions and defeats, the crew introductions, the canyon previews and the
+tutorials (one of each, NTSC and English). The game shows each one only once. They play in the PC's
+own video player (VLC, mpv or ffplay; WMV3 video with WMA Pro sound).
 
 ## Hardware auto-detection
 

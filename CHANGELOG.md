@@ -5,6 +5,26 @@ SpeedBreaker: Carbon, the project it's a fork of (v0.1.3 and earlier). Each rele
 GitHub start from its entry here, and the game shows the entry once, the first time a new version
 starts (offline: it's built into the game).
 
+## v1.2.0
+
+### What's new
+
+- **Police cars in Quick Race** (Play page, off by default): the game's own pursuit cars appear in
+  Quick Race's car select (Stock). They include the Palmont PD1, PD2 and PD3, the unmarked ghost
+  cars, the K-9 SUVs, the GTO, Cross's Corvette, and the player cop cars of online Pursuit Tag.
+- **Developer and story cars in Quick Race** (off by default): the developers' test and demo cars,
+  the bosses' and crew's own cars (Darius's Audi, the M3 GTR chase car...), and the fire and dump
+  trucks. EA never named most of them, so car select shows them without a name.
+- **Debug car menu** (off by default): CAR(DEBUG), the hidden last option of the main menu. It is EA's
+  debug car screen, with every vehicle in the game and every part slot of each.
+- **Movies:** a new launcher page with all 65 cutscenes on your disc, in story order (the story,
+  bosses, crew, canyon previews, tutorials). The game shows each one only once; they play in your
+  video player (VLC, mpv or ffplay).
+
+The extra cars use free slots of the game's car list only while you are in Quick Race. They are taken
+out again at the map and the main menu, so they never take room your career needs, and no save keeps
+them.
+
 ## v1.1.0
 
 ### What's new

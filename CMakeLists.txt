@@ -91,7 +91,7 @@ set(SB_VERSION_MW 0.2.1)
 # nfsc-linux has its own versions (its releases: github.com/linuxopt/nfsc-linux),
 # from 1.0.0, based on SpeedBreaker: Carbon 0.1.3 (SB_UPSTREAM_VERSION_CARBON).
 # The launcher checks that repository's newest release against this one.
-set(SB_VERSION_CARBON 1.1.0)
+set(SB_VERSION_CARBON 1.2.0)
 set(SB_UPSTREAM_VERSION_CARBON 0.1.3)
 set(NFSC_GITHUB_REPO "linuxopt/nfsc-linux")
 if(SB_GAME STREQUAL "carbon")

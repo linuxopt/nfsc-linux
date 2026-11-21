@@ -26,6 +26,7 @@ namespace launcher::icons
     inline constexpr uint32_t kDlc = 0x16;       // a line of cars
     inline constexpr uint32_t kSystem = 0x17;    // a grid
     inline constexpr uint32_t kUpdate = 0x1e;    // a car and a down arrow
+    inline constexpr uint32_t kMovies = 0x12;    // Nikki
 
     // The id's file in a folder of them: "<id in hex>.png".
     std::filesystem::path File(const std::filesystem::path& dir, uint32_t id);

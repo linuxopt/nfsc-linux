@@ -38,6 +38,8 @@ that stands in for the console. This fork keeps all of that and adds:
 | **DLC** | Your own Xbox 360 Marketplace packages (CON/LIVE) unpacked and offered to the game. |
 | **Its own versions and updates** | nfsc-linux is versioned on its own (from 1.0.0). The launcher checks this repository's newest release every time it starts and updates the AppImage in place; the game's *Check for Updates* asks this repository too. |
 | **The game's own icons** | The title icon and achievement icons come from each player's `default.xex`, AI-upscaled 4x. They are the launcher's page icons, the title bar and taskbar icon of both windows, and the icon of an applications menu entry. None ship with the AppImage. |
+| **Hidden content** (opt-in) | The game's police cars and its developer and story cars in Quick Race's car select, and EA's debug car menu (CAR(DEBUG)) on the main menu: all of them are in the retail game, none was ever offered. |
+| **Movies** | Every cutscene on the disc, in story order, to watch again. |
 | **Unlock all** (opt-in) | The game's own debug "unlock all things" flag, plus the DLC check, for every car, part and race. Off by default; saves never record it. |
 
 ## Download and play
@@ -95,13 +97,14 @@ to `CHANGELOG.md` (the game shows it once after updating), build the AppImage an
 
 | Page | |
 |---|---|
-| **Play** | Choose the disc image; status of the build, install, AI textures, mods, DLC and saves; *Unlock all*; PLAY (builds whatever is missing first); the log |
+| **Play** | Choose the disc image; status of the build, install, AI textures, mods, DLC and saves; *Unlock all*; the hidden content (police cars, developer cars, the debug car menu); PLAY (builds whatever is missing first); the log |
 | **Graphics** | Every video, audio and game option, read from the game's own `settings.toml` (labels, choices and ranges come from its comments); **Auto-detect the best settings for this PC** |
 | **AI Textures** | On/off; presets Ultra (Real-ESRGAN x4plus, 4x, ≤2048 px), High (≤1024 px), Fast (AnimeVideo v3, 2x) and Off, with the one recommended for the PC marked; build, rebuild, import from another of your PCs |
 | **Controls** | Rebind every keyboard control (click, press a key; right-click clears); controller deadzones and vibration; steering wheel |
 | **Saves** | Back up, restore, import, export, delete (always backed up first); a save editor that finds a 32-bit value (cash, say), narrows it down and sets it |
 | **Mods** | Add from a folder or archive, enable, reorder, remove |
 | **DLC** | Add your Marketplace packages or folders; remove |
+| **Movies** | The disc's 65 cutscenes (story, bosses, crew, canyon previews, tutorials), played in the PC's video player |
 | **System** | Hardware report, which GPU the game uses, the applications menu entry, rebuild the game, folders |
 
 Each page has an icon from the game itself: the launcher takes the disc's title icon and its
@@ -164,12 +167,13 @@ history is in [CHANGELOG.md](CHANGELOG.md).
 | `runtime/gpu/texture_replace.{h,cpp}` | New: texture packs (`NFSMW_TEXTURE_PACK`, `NFSMW_TEXTURE_REPLACE=0`, `NFSMW_TEXTURE_KEYS=<file>` to log keys), DDS loading (BC1/2/3/5/7, RGBA8) |
 | `runtime/gpu/renderer.cpp` | Hooks texture replacement into the texture load: a replacement image, format, levels and views per texture, sampled with a sampler for its mips; retired, never destroyed mid-frame |
 | `runtime/game/carbon/unlock_all.cpp` | New: `NFSMW_UNLOCK_ALL=1` (see *How it works*) and `NFSMW_UNLOCK_LOG=1` |
+| `runtime/game/carbon/hidden_content.{h,cpp}` | New: `NFSC_DEBUG_MENU=1` (the main menu's CAR(DEBUG) option) and `NFSC_EXTRA_CARS=cops,dev` (the hidden cars in Quick Race), see *How it works* |
 | `runtime/kernel/xam.cpp` | DLC content: one folder per package under the data folder's `dlc/`, registered at startup |
 | `runtime/report/build_info.cpp` | Names x86-64-v4 builds in the log |
 | `runtime/game/game_info.h` | The app is *NFSC Linux*; its releases (Check for Updates, issues) are this repository's; its window class is `nfsc-linux` |
 | `runtime/main.cpp`, `runtime/video/presenter.cpp` | The window class (`SB_APP_ID`) and the title bar icon from `NFSC_WINDOW_ICON` (the launcher's, from the disc) |
-| `runtime/CMakeLists.txt`, `recomp/CMakeLists.txt`, `CMakeLists.txt` | `SB_X86_LEVEL` (x86-64-v3 or -v4), xxHash include, `SB_EXTRAS` for the tools below; nfsc-linux's version (`SB_VERSION_CARBON` 1.1.0, from SpeedBreaker: Carbon 0.1.3) and repository (`NFSC_GITHUB_REPO`) |
-| `CHANGELOG.md` | The v1.0.0 and v1.1.0 entries (the game's "What's new" note) |
+| `runtime/CMakeLists.txt`, `recomp/CMakeLists.txt`, `CMakeLists.txt` | `SB_X86_LEVEL` (x86-64-v3 or -v4), xxHash include, `SB_EXTRAS` for the tools below; nfsc-linux's version (`SB_VERSION_CARBON` 1.2.0, from SpeedBreaker: Carbon 0.1.3) and repository (`NFSC_GITHUB_REPO`) |
+| `CHANGELOG.md` | The v1.0.0, v1.1.0 and v1.2.0 entries (the game's "What's new" note) |
 
 **New tools (`extras/`, built with `-DSB_EXTRAS=ON`)**
 

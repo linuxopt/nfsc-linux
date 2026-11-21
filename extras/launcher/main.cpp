@@ -133,7 +133,7 @@ namespace
         s_dialog.ready = true;
     }
 
-    enum class Page { Play, Graphics, Ai, Controls, Saves, Mods, Dlc, System };
+    enum class Page { Play, Graphics, Ai, Controls, Saves, Mods, Dlc, Movies, System };
 
     void Help(const std::string& text);
 
@@ -418,6 +418,28 @@ namespace
                 state.Set("unlock_all", on ? "true" : "false");
             Help("Every car (the Collector's Edition's and the Xbox Live Marketplace ones on the disc too), every part and "
                  "every race, from the start. Your saves don't record it: turn it off and the game's own progress is back.");
+        }
+        // Hidden content (runtime/game/carbon/hidden_content.cpp): what the
+        // game ships but never offers.
+        bool StateOn(const char* key) const { return state.Get(key, "false") == "true"; }
+        void StateCheckbox(const char* label, const char* key)
+        {
+            bool on = StateOn(key);
+            if (ImGui::Checkbox(label, &on))
+                state.Set(key, on ? "true" : "false");
+        }
+        void HiddenContentOptions()
+        {
+            StateCheckbox("Police cars in Quick Race", "hidden_cops");
+            Help("The game's own police cars, in Quick Race's car select (Stock): the Palmont PD1, PD2 and PD3, the "
+                 "unmarked ghost cars, the K-9 SUVs, the GTO and Cross's Corvette, and the player cop cars of online Pursuit Tag.");
+            ImGui::SameLine();
+            StateCheckbox("Developer and story cars in Quick Race", "hidden_dev");
+            Help("The developers' test and demo cars, the bosses' and crew's own cars (Darius's Audi, Cross's Corvette, the "
+                 "M3 GTR chase car...), the fire and dump trucks. Most have no name in car select: EA never named them.");
+            StateCheckbox("Debug car menu (CAR(DEBUG) on the main menu)", "hidden_debug_menu");
+            Help("EA's debug car screen, left in the retail game: every vehicle the game has, every part slot of each. "
+                 "It's the main menu's last option.");
         }
         bool AiEnabled() const { return state.Get("ai_enabled", "true") == "true" && AiPresets()[AiPresetIndex()].enabled; }
 
@@ -707,10 +729,121 @@ namespace
             return std::max(0.0f, job.parsed);
         }
 
+        // ---- movies: the game's cutscenes, which it never shows again ----
+        struct Movie { std::string group, title; fs::path file; };
+        std::vector<Movie> movies;
+        Process moviePlayer;
+        std::string movieMessage;
+
+        // "seq06_samsonflashback_english_ntsc.wmv" -> its group and a title.
+        static Movie DescribeMovie(const fs::path& file)
+        {
+            std::string base = file.stem().string();
+            for (const char* tail : { "_english", "_spanish", "_ntsc", "_pal", "_ws" })
+                if (size_t at = base.find(tail); at != std::string::npos)
+                    base.erase(at, strlen(tail));
+            static const std::pair<const char*, const char*> kStory[] = {
+                { "seq01_opening", "1. Opening" }, { "seq02_busted", "2. Busted" }, { "seq05_safehouse", "5. The safehouse" },
+                { "seq06_samsonflashback", "6. Samson remembers" }, { "seq07_restaurant", "7. The restaurant" },
+                { "seq08_yumiflashback", "8. Yumi remembers" }, { "seq09_nikkiflashback", "9. Nikki remembers" },
+                { "seq10_colinflashback", "10. Colin remembers" }, { "seq11_reversal", "11. The reversal" },
+                { "seq12_dariusphonecall", "12. Darius calls" }, { "seq13_herowins", "13. The ending" } };
+            for (auto& [k, t] : kStory)
+                if (base == k)
+                    return { "1 Story", t, file };
+            auto words = [](std::string w) {
+                for (char& c : w) if (c == '_') c = ' ';
+                bool start = true;
+                for (char& c : w) { if (start && c >= 'a' && c <= 'z') c = char(c - 32); start = c == ' '; }
+                return w;
+            };
+            auto after = [&](const char* prefix) { return base.substr(strlen(prefix)); };
+            if (base.rfind("bossdefeat_", 0) == 0) return { "3 Bosses defeated", words(after("bossdefeat_")), file };
+            if (base.rfind("boss_", 0) == 0) return { "2 Bosses", words(after("boss_")), file };
+            if (base.rfind("crew_", 0) == 0) return { "4 Crew", words(after("crew_")), file };
+            if (base.rfind("canyon_", 0) == 0) return { "5 Canyon previews", words(after("canyon_")), file };
+            if (base.rfind("tutorial_", 0) == 0) return { "6 Tutorials", words(after("tutorial_")), file };
+            for (const char* ad : { "madden07", "nbalive07", "nhl07", "tiger07" })
+                if (base.rfind(ad, 0) == 0) return { "8 EA trailers (2006)", words(base), file };
+            return { "7 Other", words(base), file };
+        }
+
+        void ListMovies()
+        {
+            movies.clear();
+            if (!gameDir)
+                return;
+            std::error_code ec;
+            std::vector<fs::path> files;
+            for (const auto& e : fs::directory_iterator(*gameDir / "Movies", ec))
+                if (e.path().extension() == ".wmv")
+                    files.push_back(e.path());
+            std::sort(files.begin(), files.end());
+            auto has = [&](const std::string& name) { return std::find(files.begin(), files.end(), *gameDir / "Movies" / name) != files.end(); };
+            for (const fs::path& f : files)
+            {
+                std::string n = f.filename().string();
+                // One of each: NTSC over PAL, English over Spanish, 4:3 bumpers over widescreen.
+                auto swap = [&](const char* from, const char* to) {
+                    std::string o = n;
+                    size_t at = o.find(from);
+                    return at == std::string::npos ? std::string() : o.replace(at, strlen(from), to);
+                };
+                if (std::string o = swap("_pal", "_ntsc"); !o.empty() && has(o)) continue;
+                if (std::string o = swap("_spanish", "_english"); !o.empty() && has(o)) continue;
+                if (std::string o = swap("_ws_", "_"); !o.empty() && has(o)) continue;
+                movies.push_back(DescribeMovie(f));
+            }
+            std::stable_sort(movies.begin(), movies.end(), [](const Movie& a, const Movie& b) { return a.group < b.group; });
+        }
+
+        static std::string FindProgram(const char* name)
+        {
+            std::string dirs = Env("PATH", "/usr/local/bin:/usr/bin:/bin") + ":/usr/bin:/bin";
+            size_t at = 0;
+            while (at <= dirs.size())
+            {
+                size_t end = dirs.find(':', at);
+                if (end == std::string::npos) end = dirs.size();
+                std::string candidate = dirs.substr(at, end - at) + "/" + name;
+                if (end > at && access(candidate.c_str(), X_OK) == 0)
+                    return candidate;
+                at = end + 1;
+            }
+            return {};
+        }
+
+        // The PC's own video player (the movies are WMV3 with WMA Pro sound).
+        void PlayMovie(const Movie& m)
+        {
+            if (moviePlayer.Running())
+                moviePlayer.Stop();
+            std::vector<std::string> argv;
+            if (std::string vlc = FindProgram("vlc"); !vlc.empty())
+                argv = { vlc, "--play-and-exit", "--meta-title", m.title, m.file.string() };
+            else if (std::string mpv = FindProgram("mpv"); !mpv.empty())
+                argv = { mpv, "--title=" + m.title, m.file.string() };
+            else if (std::string ffplay = FindProgram("ffplay"); !ffplay.empty())
+                argv = { ffplay, "-autoexit", "-window_title", m.title, m.file.string() };
+            else if (std::string open = FindProgram("xdg-open"); !open.empty())
+                argv = { open, m.file.string() };
+            if (argv.empty() || !moviePlayer.Start(argv))
+                movieMessage = "No video player found: install VLC, mpv or FFmpeg (ffplay).";
+            else
+                movieMessage = "Playing " + m.title + " in " + fs::path(argv[0]).filename().string();
+        }
+
+        void PollMovie()
+        {
+            moviePlayer.Poll();  // its output, read so it never blocks on a full pipe
+            if (!movieMessage.empty() && movieMessage.rfind("Playing", 0) == 0 && !moviePlayer.Running())
+                movieMessage.clear();
+        }
+
         // ---- the game's icons ----
         fs::path IconDir() const { return dataDir / "icons"; }
         static constexpr uint32_t kIconIds[] = { icons::kTitle, icons::kPlay, icons::kGraphics, icons::kAi, icons::kControls,
-            icons::kSaves, icons::kMods, icons::kDlc, icons::kSystem, icons::kUpdate };
+            icons::kSaves, icons::kMods, icons::kDlc, icons::kMovies, icons::kSystem, icons::kUpdate };
 
         ImTextureData* Icon(uint32_t id) const
         {
@@ -880,6 +1013,12 @@ namespace
                 env.push_back("NFSMW_GPU=" + gpu);
             // Every car, part, race and DLC unlocked (runtime/game/carbon/unlock_all.cpp).
             env.push_back(std::string("NFSMW_UNLOCK_ALL=") + (UnlockAll() ? "1" : "0"));
+            // Hidden content (runtime/game/carbon/hidden_content.cpp).
+            env.push_back(std::string("NFSC_DEBUG_MENU=") + (StateOn("hidden_debug_menu") ? "1" : "0"));
+            std::string extra = StateOn("hidden_cops") ? "cops" : "";
+            if (StateOn("hidden_dev"))
+                extra += extra.empty() ? "dev" : ",dev";
+            env.push_back("NFSC_EXTRA_CARS=" + extra);
             // The game window's title bar icon: the game's own (TickIcons).
             if (fs::path icon = icons::AppIcon(IconDir(), 256); fs::exists(icon))
                 env.push_back("NFSC_WINDOW_ICON=" + icon.string());
@@ -1246,6 +1385,7 @@ namespace
         void UiSaves();
         void UiMods();
         void UiDlc();
+        void UiMovies();
         void UiSystem();
         void UiJob();
         void UiUpdates();
@@ -1303,7 +1443,8 @@ namespace
         struct Nav { Page page; const char* label; uint32_t icon; };
         const Nav nav[] = { { Page::Play, "Play", icons::kPlay }, { Page::Graphics, "Graphics", icons::kGraphics },
             { Page::Ai, "AI Textures", icons::kAi }, { Page::Controls, "Controls", icons::kControls }, { Page::Saves, "Saves", icons::kSaves },
-            { Page::Mods, "Mods", icons::kMods }, { Page::Dlc, "DLC", icons::kDlc }, { Page::System, "System", icons::kSystem } };
+            { Page::Mods, "Mods", icons::kMods }, { Page::Dlc, "DLC", icons::kDlc }, { Page::Movies, "Movies", icons::kMovies },
+            { Page::System, "System", icons::kSystem } };
         for (const Nav& n : nav)
         {
             // The row: the game's icon for the page (when it's in), then its name.
@@ -1326,6 +1467,7 @@ namespace
                 if (page == Page::Saves) { saves = ListSaves(dataDir); backups = ListSaveBackups(dataDir); }
                 if (page == Page::Mods) mods = ListMods(dataDir);
                 if (page == Page::Dlc) dlc = ListDlc(dataDir);
+                if (page == Page::Movies) ListMovies();
                 if (page == Page::Graphics || page == Page::Controls) LoadSettings();
             }
         }
@@ -1354,6 +1496,7 @@ namespace
         case Page::Saves: UiSaves(); break;
         case Page::Mods: UiMods(); break;
         case Page::Dlc: UiDlc(); break;
+        case Page::Movies: UiMovies(); break;
         case Page::System: UiSystem(); break;
         }
         ImGui::EndChild();
@@ -1439,6 +1582,7 @@ namespace
         ImGui::Text("Mods: %zu enabled   DLC: %zu   Saves: %zu", enabledMods, ListDlc(dataDir).size(), ListSaves(dataDir).size());
         ImGui::Text("This computer: %s tier (%s)", TierName(hw.tier), hw.best >= 0 ? hw.gpus[hw.best].name.c_str() : "no GPU");
         UnlockAllCheckbox();
+        HiddenContentOptions();
         ImGui::Spacing();
         const char* label = gameRunning ? "Playing..." : !built ? "BUILD & PLAY" : (AiEnabled() && !packCount && gameDir) ? "ENHANCE & PLAY" : "PLAY";
         if (BigButton(label, ImVec2(ImGui::GetFontSize() * 14, ImGui::GetFontSize() * 3), gameDir && !gameRunning && !job.active && hw.x86_64_v3))
@@ -1879,6 +2023,40 @@ namespace
             ImGui::TextDisabled("No mods installed.");
     }
 
+    void App::UiMovies()
+    {
+        ImGui::SeparatorText("The game's cutscenes");
+        ImGui::TextWrapped("Every movie on your disc, in story order: the game shows each one once and has no way to watch them "
+            "again. They play in this computer's video player (VLC, mpv or ffplay).");
+        if (!gameDir)
+        {
+            ImGui::TextDisabled("Install the game first.");
+            return;
+        }
+        if (movies.empty())
+            ListMovies();
+        if (!movieMessage.empty())
+            ImGui::TextColored(ImVec4(1.0f, 0.75f, 0.35f, 1), "%s", movieMessage.c_str());
+        ImGui::BeginChild("##movies", ImVec2(0, 0), ImGuiChildFlags_Borders);
+        std::string group;
+        for (size_t i = 0; i < movies.size(); i++)
+        {
+            const Movie& m = movies[i];
+            if (m.group != group)
+            {
+                group = m.group;
+                ImGui::SeparatorText(group.substr(2).c_str());
+            }
+            ImGui::PushID(int(i));
+            if (ImGui::SmallButton("Play"))
+                PlayMovie(m);
+            ImGui::SameLine();
+            ImGui::TextUnformatted(m.title.c_str());
+            ImGui::PopID();
+        }
+        ImGui::EndChild();
+    }
+
     void App::UiDlc()
     {
         ImGui::SeparatorText("Downloadable content");
@@ -2059,6 +2237,16 @@ int main(int argc, char** argv)
 
     app.CheckWhere();
     app.LoadSettings();
+    // NFSC_LAUNCHER_PAGE=movies (or dlc, system...): open on that page.
+    if (std::string start = Env("NFSC_LAUNCHER_PAGE"); !start.empty())
+    {
+        static const std::pair<const char*, Page> kPages[] = { { "play", Page::Play }, { "graphics", Page::Graphics },
+            { "ai", Page::Ai }, { "controls", Page::Controls }, { "saves", Page::Saves }, { "mods", Page::Mods },
+            { "dlc", Page::Dlc }, { "movies", Page::Movies }, { "system", Page::System } };
+        for (auto& [name, p] : kPages)
+            if (start == name)
+                app.page = p;
+    }
     // First run on this computer (or other hardware): tune the settings to it.
     if (app.settings.Loaded() && app.state.Get("fingerprint") != app.hw.Fingerprint())
         app.AutoTune(true);
@@ -2103,6 +2291,7 @@ int main(int argc, char** argv)
         app.PollGame();
         app.PollUpdate();
         app.TickIcons();
+        app.PollMovie();
         if (app.restartRequested)
             quit = true;
         if (headlessUpdate && app.upd != App::Upd::Checking && !app.job.active)
