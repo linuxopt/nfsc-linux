@@ -2,6 +2,7 @@
 # SpeedBreaker: Carbon as one AppImage for this person's own Linux PCs:
 #
 #   scripts/appimage/make_appimage.sh [options]    -> <out>/NFSC-Linux-x86_64.AppImage (+ .sha256)
+#                                                     and NFSC-Linux-x86_64.tar.gz, the same folder
 #     --v3 <build dir>         x86-64-v3 build (default build/v3; needs -DSB_EXTRAS=ON)
 #     --v4 <build dir>         x86-64-v4 (AVX-512) build (default build/v4; optional)
 #     --realesrgan <dir>       Real-ESRGAN ncnn-vulkan (its binary and models/)
@@ -112,8 +113,9 @@ cp "$ROOT"/scripts/appimage/licenses/* "$SHARE/licenses/"
 echo "NFSC Linux $VERSION (AppImage, $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown))" > "$SHARE/VERSION"
 # RecompLauncher (recomplauncher.com) reads its profile from the AppDir's root: how it sets the
 # game up from the player's disc (--prepare), starts it (--play), its settings and saves. Its
-# prepare.version is this release's, so every update builds the game again when it must.
-sed "s/@VERSION@/$VERSION/" "$ROOT/scripts/appimage/recomplauncher.json" > "$APPDIR/recomplauncher.json"
+# RecompLauncher runs the setup step again after every update (the launcher's --prepare
+# rebuilds only when the SDK changed).
+cp "$ROOT/scripts/appimage/recomplauncher.json" "$APPDIR/recomplauncher.json"
 
 # Everything copied from this machine's packages: their licenses and sources.
 "$ROOT/scripts/appimage/collect_licenses.sh" "$APPDIR" "$SHARE/licenses"
@@ -146,4 +148,11 @@ head -c "$OFFSET" "$TOOL" > "$OUT/runtime-x86_64"
 OUTFILE="$OUT/NFSC-Linux-x86_64.AppImage"
 ARCH=x86_64 "$TOOL" --no-appstream --runtime-file "$OUT/runtime-x86_64" --comp zstd "$APPDIR" "$OUTFILE" >&2
 ( cd "$OUT" && sha256sum "$(basename "$OUTFILE")" > "$(basename "$OUTFILE").sha256" )
+# The same folder as a tarball, for RecompLauncher (it reads recomplauncher.json from the top of
+# a release's tarball or zip, and installs either into a plain folder started from AppRun).
+# recomplauncher.json goes first, so a reader that stops early still finds it.
+TARBALL="$OUT/NFSC-Linux-x86_64.tar.gz"
+( cd "$APPDIR" && tar --owner=0 --group=0 --numeric-owner -cf - recomplauncher.json \
+    $(ls -A | grep -vx recomplauncher.json) ) | gzip -9 > "$TARBALL"
+( cd "$OUT" && sha256sum "$(basename "$TARBALL")" > "$(basename "$TARBALL").sha256" )
 echo "$OUTFILE"

@@ -5,6 +5,19 @@ SpeedBreaker: Carbon, the project it's a fork of (v0.1.3 and earlier). Each rele
 GitHub start from its entry here, and the game shows the entry once, the first time a new version
 starts (offline: it's built into the game).
 
+## v1.2.2
+
+### Fixes
+
+- **RecompLauncher:** each release also carries `NFSC-Linux-x86_64.tar.gz`, the AppImage's
+  folder as a tarball with `recomplauncher.json` on top, which is where recomplauncher.com's
+  submit page and RecompLauncher's release check look for it (they don't read inside an
+  AppImage). RecompLauncher can install either file; the launcher's own updates still use the
+  AppImage.
+- **`recomplauncher.json` follows RecompLauncher's current format:** your disc image is the
+  `game` input, checked by Need for Speed: Carbon's title ID (454107EC) so another Xbox 360 disc
+  is refused when you pick it, and the setup step leaves out the keys the format no longer has.
+
 ## v1.2.1
 
 ### What's new

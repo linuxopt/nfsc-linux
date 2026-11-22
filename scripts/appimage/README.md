@@ -94,10 +94,12 @@ own video player (VLC, mpv or ffplay; WMV3 video with WMA Pro sound).
 
 ## RecompLauncher
 
-The AppImage carries a `recomplauncher.json` at its root (from `scripts/appimage/recomplauncher.json`,
-its `prepare.version` set to the release's), the profile [RecompLauncher](https://recomplauncher.com)
-reads. RecompLauncher unpacks the AppImage and runs its `AppRun` (with `RECOMPLAUNCHER=1`, no
-`APPIMAGE`):
+The AppImage carries a `recomplauncher.json` at its root (from `scripts/appimage/recomplauncher.json`), the profile [RecompLauncher](https://recomplauncher.com)
+reads. `make_appimage.sh` also packs the same folder as `NFSC-Linux-x86_64.tar.gz`, with
+`recomplauncher.json` first: recomplauncher.com's release check reads the file from a tarball or
+zip, never from inside an AppImage. RecompLauncher installs either one into a plain folder and runs
+its `AppRun` (with `RECOMPLAUNCHER=1`, no `APPIMAGE`; `program` lists the AppImage, then `AppRun`
+for the tarball):
 
 | | |
 |---|---|

@@ -3,22 +3,24 @@
   "format": 1,
   "name": "NFSC Linux",
   "repo": "linuxopt/nfsc-linux",
-  "game": {
-    "kind": "iso",
-    "label": "Your disc image (.iso) of Need for Speed: Carbon Collector's Edition for Xbox 360, USA.",
-    "check": { "xdvdfs": "default.xex" }
-  },
+  "inputs": [
+    {
+      "id": "game",
+      "role": "game",
+      "label": "Your disc image (.iso) of Need for Speed: Carbon Collector's Edition for Xbox 360, USA.",
+      "formats": [{ "type": "file", "extensions": ["iso"] }],
+      "check": { "ids": ["454107EC"] }
+    }
+  ],
   "prepare": {
-    "program": ["NFSC-Linux-x86_64.AppImage"],
-    "args": ["--prepare", "--game={game}"],
+    "program": ["NFSC-Linux-x86_64.AppImage", "AppRun"],
+    "args": ["--prepare", "--game={input:game}"],
     "label": "Installing the game from your disc and building it for your CPU",
-    "timeout": 3600,
     "done": ["{local}/speedbreaker-carbon/game/default.xex"],
-    "keeps_copy": true,
-    "version": "@VERSION@"
+    "keeps_copy": true
   },
   "start": {
-    "program": ["NFSC-Linux-x86_64.AppImage"],
+    "program": ["NFSC-Linux-x86_64.AppImage", "AppRun"],
     "args": ["--play"]
   },
   "config": [
