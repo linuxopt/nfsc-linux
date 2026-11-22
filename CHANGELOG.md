@@ -9,11 +9,10 @@ starts (offline: it's built into the game).
 
 ### Fixes
 
-- **RecompLauncher:** each release also carries `NFSC-Linux-x86_64.tar.gz`, the AppImage's
-  folder as a tarball with `recomplauncher.json` on top, which is where recomplauncher.com's
-  submit page and RecompLauncher's release check look for it (they don't read inside an
-  AppImage). RecompLauncher can install either file; the launcher's own updates still use the
-  AppImage.
+- **RecompLauncher:** each release also carries `NFSC-Linux-x86_64.zip`, the AppImage's
+  folder as a zip with `recomplauncher.json` on top, which is where recomplauncher.com's release
+  check looks for it (it doesn't read inside an AppImage). RecompLauncher still installs the
+  AppImage, and the launcher's own updates still use the AppImage.
 - **`recomplauncher.json` follows RecompLauncher's current format:** your disc image is the
   `game` input, checked by Need for Speed: Carbon's title ID (454107EC) so another Xbox 360 disc
   is refused when you pick it, and the setup step leaves out the keys the format no longer has.

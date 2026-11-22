@@ -2,7 +2,7 @@
 # SpeedBreaker: Carbon as one AppImage for this person's own Linux PCs:
 #
 #   scripts/appimage/make_appimage.sh [options]    -> <out>/NFSC-Linux-x86_64.AppImage (+ .sha256)
-#                                                     and NFSC-Linux-x86_64.tar.gz, the same folder
+#                                                     and NFSC-Linux-x86_64.zip, the same folder
 #     --v3 <build dir>         x86-64-v3 build (default build/v3; needs -DSB_EXTRAS=ON)
 #     --v4 <build dir>         x86-64-v4 (AVX-512) build (default build/v4; optional)
 #     --realesrgan <dir>       Real-ESRGAN ncnn-vulkan (its binary and models/)
@@ -148,11 +148,13 @@ head -c "$OFFSET" "$TOOL" > "$OUT/runtime-x86_64"
 OUTFILE="$OUT/NFSC-Linux-x86_64.AppImage"
 ARCH=x86_64 "$TOOL" --no-appstream --runtime-file "$OUT/runtime-x86_64" --comp zstd "$APPDIR" "$OUTFILE" >&2
 ( cd "$OUT" && sha256sum "$(basename "$OUTFILE")" > "$(basename "$OUTFILE").sha256" )
-# The same folder as a tarball, for RecompLauncher (it reads recomplauncher.json from the top of
-# a release's tarball or zip, and installs either into a plain folder started from AppRun).
-# recomplauncher.json goes first, so a reader that stops early still finds it.
-TARBALL="$OUT/NFSC-Linux-x86_64.tar.gz"
-( cd "$APPDIR" && tar --owner=0 --group=0 --numeric-owner -cf - recomplauncher.json \
-    $(ls -A | grep -vx recomplauncher.json) ) | gzip -9 > "$TARBALL"
-( cd "$OUT" && sha256sum "$(basename "$TARBALL")" > "$(basename "$TARBALL").sha256" )
+# The same folder as a zip, for RecompLauncher: recomplauncher.com's release check reads
+# recomplauncher.json from the top of a release's zip (never from inside an AppImage or a
+# tarball). The launcher itself installs the AppImage; a zip it would install the same way, into
+# a plain folder started from AppRun (unzip keeps AppRun's mode and the .DirIcon symlink).
+ZIPFILE="$OUT/NFSC-Linux-x86_64.zip"
+rm -f "$ZIPFILE"
+( cd "$APPDIR" && zip -q -X -9 -y "$ZIPFILE" recomplauncher.json &&
+    zip -q -X -9 -r -y "$ZIPFILE" $(ls -A | grep -vx recomplauncher.json) )
+( cd "$OUT" && sha256sum "$(basename "$ZIPFILE")" > "$(basename "$ZIPFILE").sha256" )
 echo "$OUTFILE"

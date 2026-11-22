@@ -40,7 +40,7 @@ that stands in for the console. This fork keeps all of that and adds:
 | **The game's own icons** | The title icon and achievement icons come from each player's `default.xex`, AI-upscaled 4x. They are the launcher's page icons, the title bar and taskbar icon of both windows, and the icon of an applications menu entry. None ship with the AppImage. |
 | **Hidden content** (opt-in) | The game's police cars and its developer and story cars in Quick Race's car select, and EA's debug car menu (CAR(DEBUG)) on the main menu: all of them are in the retail game, none was ever offered. |
 | **Movies** | Every cutscene on the disc, in story order, to watch again. |
-| **RecompLauncher support** | A `recomplauncher.json` in the AppImage and in its tarball twin: [RecompLauncher](https://recomplauncher.com) installs, sets up (from the player's disc) and updates the game, with its settings on the game's page. |
+| **RecompLauncher support** | A `recomplauncher.json` in the AppImage and in its zip twin: [RecompLauncher](https://recomplauncher.com) installs, sets up (from the player's disc) and updates the game, with its settings on the game's page. |
 | **Unlock all** (opt-in) | The game's own debug "unlock all things" flag, plus the DLC check, for every car, part and race. Off by default; saves never record it. |
 
 ## Download and play
